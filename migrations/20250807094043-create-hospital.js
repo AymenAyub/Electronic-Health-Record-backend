@@ -17,6 +17,10 @@ export async function up(queryInterface, Sequelize) {
       email: {
         type: Sequelize.STRING
       },
+      subdomain:{
+        type: Sequelize.STRING,
+        unique: true
+      },
       phone: {
         type: Sequelize.STRING
       },

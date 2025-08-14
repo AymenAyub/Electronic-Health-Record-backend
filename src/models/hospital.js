@@ -23,6 +23,7 @@ export default (sequelize, DataTypes) => {
       },
       name: DataTypes.STRING,
       email: DataTypes.STRING,
+      subdomain: DataTypes.STRING,
       phone: DataTypes.STRING,
       address: DataTypes.STRING,
       isActive: DataTypes.BOOLEAN,

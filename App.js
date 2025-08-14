@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import db from "./models/index.js";
+import db from "./src/models/index.js";
+import userRoutes from "./src/routes/userRoutes.js";
+import hospitalRoutes from "./src/routes/hospitalRoutes.js";
 
 dotenv.config();
 
@@ -15,8 +17,8 @@ app.use(cors({
   credentials: true
 }));
 
-// app.use("/api/superadmin", superAdminRoutes);
-// app.use("/api/hospitals", hospitalRoutes);
+app.use("/api", userRoutes);
+app.use("/api/hospital", hospitalRoutes);
 
 db.sequelize.sync({ alter: true })
   .then(() => {

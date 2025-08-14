@@ -12,7 +12,6 @@ export async function up(queryInterface, Sequelize) {
       },
       hospital_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
         references: {
           model: 'Hospitals', // exact table name
           key: 'id',
