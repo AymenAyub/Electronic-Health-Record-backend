@@ -12,6 +12,7 @@ export async function up(queryInterface, Sequelize) {
       },
       hospital_id: {
         type: Sequelize.INTEGER,
+        allowNull: true,
         references: {
           model: 'Hospitals', // exact table name
           key: 'id',
@@ -19,6 +20,16 @@ export async function up(queryInterface, Sequelize) {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
+      // role_id: {
+      //   type: Sequelize.INTEGER,
+      //   allowNull: false,
+      //   references: {
+      //     model: 'Roles',
+      //     key: 'role_id',
+      //   },
+      //   onUpdate: 'CASCADE',
+      //   onDelete: 'CASCADE', 
+      // },      
       name: {
         type: Sequelize.STRING,
         allowNull: false,
@@ -36,6 +47,18 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.ENUM('admin', 'doctor', 'staff'),
         allowNull: false,
       },
+      specialty: {
+        type: Sequelize.STRING,
+        allowNull: true, // only for doctors
+      },
+      bio: {
+        type: Sequelize.TEXT,
+        allowNull: true, // only for doctors
+      },
+      contact: {
+        type: Sequelize.STRING,
+        allowNull: true, // only for doctors
+      },      
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,

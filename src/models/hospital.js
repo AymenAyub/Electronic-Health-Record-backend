@@ -21,18 +21,18 @@ export default (sequelize, DataTypes) => {
         autoIncrement: true,
         allowNull: false,
       },
-      name: DataTypes.STRING,
-      email: DataTypes.STRING,
-      subdomain: DataTypes.STRING,
-      phone: DataTypes.STRING,
-      address: DataTypes.STRING,
-      isActive: DataTypes.BOOLEAN,
+      name: { type: DataTypes.STRING, allowNull: false },
+      email: { type: DataTypes.STRING, allowNull: false, unique: true },
+      subdomain: { type: DataTypes.STRING, allowNull: false, unique: true }, // <- clarity
+      phone: { type: DataTypes.STRING, allowNull: true },
+      address: { type: DataTypes.TEXT, allowNull: true },
+      isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
     },
     {
       sequelize,
       modelName: 'Hospital',
       tableName: 'Hospitals',
-      timestamps: true, // for createdAt, updatedAt
+      timestamps: true, 
     }
   );
 

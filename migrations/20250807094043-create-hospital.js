@@ -15,9 +15,10 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.STRING
       },
       email: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        unique: true
       },
-      subdomain:{
+      subdomain: {
         type: Sequelize.STRING,
         unique: true
       },
@@ -28,7 +29,8 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.STRING
       },
       isActive: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
       },
       createdAt: {
         allowNull: false,
@@ -38,6 +40,7 @@ export async function up(queryInterface, Sequelize) {
         allowNull: false,
         type: Sequelize.DATE
       }
+  
     });
   }
  export async function down(queryInterface, Sequelize) {

@@ -15,6 +15,12 @@ export default (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+
+      // User.belongsTo(models.Role, {
+      //   foreignKey: 'role_id',
+      //   as: 'role'
+      // });
+      
     }
   }
 
@@ -30,6 +36,10 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
+      role: {
+        type: DataTypes.ENUM('admin', 'doctor', 'staff'),
+        allowNull: false,
+      },
       name: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -43,10 +53,19 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      role: {
-        type: DataTypes.ENUM('admin', 'doctor', 'staff'),
-        allowNull: false,
-      }
+      specialty: {
+        type: DataTypes.STRING,
+        allowNull: true, // only for doctors
+      },
+      bio: {
+        type: DataTypes.TEXT,
+        allowNull: true, // only for doctors
+      },
+      contact: {
+        type: DataTypes.STRING,
+        allowNull: true, // only for doctors
+      },
+      
     },
     {
       sequelize,
