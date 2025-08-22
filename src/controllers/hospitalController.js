@@ -112,3 +112,20 @@ export const getMyHospital = async (req, res) => {
   }
 };
 
+
+export const checkHospital = async (req, res) => {
+  try {
+    const adminUser = req.user;
+
+    if (!adminUser?.hospital_id) {
+      return res.json({ hasHospital: false });
+    }
+
+    const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
+    
+    return res.json({ hasHospital: !!hospital, hospital });
+  } catch (err) {
+    console.error("checkHospital error:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

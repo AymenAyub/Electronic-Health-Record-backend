@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import db from "./src/models/index.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import hospitalRoutes from "./src/routes/hospitalRoutes.js";
-
+import dashboardRoutes from "./src/routes/DashboardRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -19,6 +19,7 @@ app.use(cors({
 
 app.use("/api", userRoutes);
 app.use("/api/hospital", hospitalRoutes);
+app.use("/api",dashboardRoutes)
 
 db.sequelize.sync({ alter: true })
   .then(() => {

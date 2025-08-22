@@ -47,6 +47,10 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.ENUM('admin', 'doctor', 'staff'),
         allowNull: false,
       },
+      designation: {
+        type: Sequelize.STRING,
+        allowNull: true, 
+      },
       specialty: {
         type: Sequelize.STRING,
         allowNull: true, // only for doctors

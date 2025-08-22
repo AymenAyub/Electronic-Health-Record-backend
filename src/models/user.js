@@ -12,6 +12,7 @@ export default (sequelize, DataTypes) => {
 
       User.hasMany(models.Appointment, {
         foreignKey: 'doctor_id',
+        as: 'DoctorAppointments',
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
@@ -39,6 +40,10 @@ export default (sequelize, DataTypes) => {
       role: {
         type: DataTypes.ENUM('admin', 'doctor', 'staff'),
         allowNull: false,
+      },
+      designation: {
+        type: DataTypes.STRING,
+        allowNull: true, 
       },
       name: {
         type: DataTypes.STRING,

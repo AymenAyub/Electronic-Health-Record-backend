@@ -17,6 +17,7 @@ export default (sequelize, DataTypes) => {
 
        Appointment.belongsTo(models.User, {
         foreignKey: 'doctor_id',
+        as: 'Doctor',
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
