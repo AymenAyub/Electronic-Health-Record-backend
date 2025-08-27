@@ -4,18 +4,23 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class Permission extends Model {
     static associate(models) {
-     
+      // Many-to-many with Role
       Permission.belongsToMany(models.Role, {
-        through: models.RolePermissions,
+        through: models.RolePermission,   // ✅ singular, same as rolepermission.js
         foreignKey: 'permission_id',
         otherKey: 'role_id',
-        as:'roles'
+        as: 'roles'
       });
     }
   }
 
   Permission.init(
     {
+      id: {                   // ✅ primary key
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
+      },
       name: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -29,7 +34,8 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: 'Permission',
-      tableName: 'Permissions'
+      tableName: 'Permissions',
+      timestamps: true
     }
   );
 

@@ -8,6 +8,14 @@ export default (sequelize, DataTypes) => {
       MedicalHistory.belongsTo(models.Patient, {
         foreignKey: 'patient_id'
       });
+
+      MedicalHistory.belongsTo(models.Hospital, {
+        foreignKey: 'hospital_id',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+
+    
     }
   }
   MedicalHistory.init({
@@ -20,6 +28,10 @@ export default (sequelize, DataTypes) => {
     patient_id: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    hospital_id: { 
+      type: DataTypes.INTEGER,
+      allowNull: true
     },
     past_illnesses: {
       type: DataTypes.TEXT,

@@ -9,7 +9,7 @@ import { getMyHospital } from "../controllers/hospitalController.js";
 
 router.get("/check-subdomain/:value", checkSubdomain);
 router.get("/getBySubdomain/:subdomain", getBySubdomain);
-router.get("/me", authenticateUser, getMyHospital);
+router.get("/:hospital_id", authenticateUser, getMyHospital);
 router.post("/registerHospital",authenticateUser, isAdmin , registerHospital);
 router.get("/check",authenticateUser, isAdmin, checkHospital)
 

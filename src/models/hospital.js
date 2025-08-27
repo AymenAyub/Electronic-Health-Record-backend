@@ -4,7 +4,19 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class Hospital extends Model {
     static associate(models) {
-      // 1 Hospital → Many Patients
+
+      // Hospital.belongsToMany(models.User, {
+      //   through: models.UserHospital,
+      //   foreignKey: 'hospital_id',
+      //   otherKey: 'user_id',
+      //   as: 'users',
+      // });
+      
+      Hospital.hasMany(models.UserHospital, {
+        foreignKey: 'hospital_id',
+        as: 'userHospitals',
+      });
+      
       Hospital.hasMany(models.Patient, {
         foreignKey: 'hospital_id',
         onDelete: 'CASCADE',

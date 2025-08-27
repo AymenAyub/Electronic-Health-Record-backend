@@ -1,6 +1,5 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('Payments', {
     payment_id: {
@@ -15,6 +14,16 @@ export async function up(queryInterface, Sequelize) {
       references: {
         model: 'Patients',
         key: 'patient_id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
+    },
+    hospital_id: {  
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Hospitals',
+        key: 'id'
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'

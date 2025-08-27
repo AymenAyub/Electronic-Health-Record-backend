@@ -10,6 +10,16 @@
       autoIncrement: true,
       primaryKey: true
     },
+    hospital_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Hospitals',
+        key: 'id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    },    
     patient_id: {
       type: Sequelize.INTEGER,
       allowNull: false,

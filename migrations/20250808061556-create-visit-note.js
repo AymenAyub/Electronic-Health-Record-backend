@@ -29,6 +29,13 @@ export async function up(queryInterface, Sequelize) {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
+    hospital_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      references: { model: 'Hospitals', key: 'id' },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
+    },    
     symptoms: {
       type: Sequelize.TEXT,
       allowNull: true

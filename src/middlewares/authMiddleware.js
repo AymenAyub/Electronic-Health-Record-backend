@@ -10,7 +10,10 @@ export const authenticateUser = async (req, res, next) => {
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const adminUser = await db.User.findByPk(decoded.id);
+    const adminUser = await db.User.findOne({
+      where: { user_id: decoded.user_id } 
+    });
+    
     if (!adminUser) 
         return res.status(404).json({ message: "User not found" });
 

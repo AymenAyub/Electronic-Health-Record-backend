@@ -17,6 +17,12 @@ export default (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+
+      Payment.belongsTo(models.Hospital, {
+        foreignKey: 'hospital_id',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+      });
     }
   }
 
@@ -33,6 +39,10 @@ export default (sequelize, DataTypes) => {
         allowNull: false
       },
       appointment_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+      },
+      hospital_id: {           
         type: DataTypes.INTEGER,
         allowNull: false
       },

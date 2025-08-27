@@ -4,11 +4,19 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
-      User.belongsTo(models.Hospital, {
-        foreignKey: 'hospital_id',
-        onDelete: 'CASCADE',
-        onUpdate: 'CASCADE',
+
+      // User.belongsToMany(models.Hospital, {
+      //   through: 'UserHospitals',
+      //   foreignKey: 'user_id',
+      //   otherKey: 'hospital_id',
+      //   as: 'hospitals',
+      // });
+
+      User.hasMany(models.UserHospital, {
+        foreignKey: 'user_id',
+        as: 'userHospitals',
       });
+      
 
       User.hasMany(models.Appointment, {
         foreignKey: 'doctor_id',
@@ -33,10 +41,10 @@ export default (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      hospital_id: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-      },
+      // hospital_id: {
+      //   type: DataTypes.INTEGER,
+      //   allowNull: true,
+      // },
       role: {
         type: DataTypes.ENUM('admin', 'doctor', 'staff'),
         allowNull: false,

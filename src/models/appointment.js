@@ -35,7 +35,13 @@ export default (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'
       });
-    
+
+      Appointment.belongsTo(models.Hospital, {
+        foreignKey: 'hospital_id',
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
+      });
+      
     }
   }
   Appointment.init(
@@ -45,6 +51,10 @@ export default (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true,
         allowNull: false
+      },
+      hospital_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
       },
       patient_id: {
         type: DataTypes.INTEGER,

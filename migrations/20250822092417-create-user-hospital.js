@@ -2,59 +2,51 @@
 
 /** @type {import('sequelize-cli').Migration} */
 export async function up(queryInterface, Sequelize) {
-  await queryInterface.createTable('MedicalHistories', {
-    history_id: {
+  await queryInterface.createTable('UserHospitals', {
+    id: {
       type: Sequelize.INTEGER,
-      allowNull: false,
       autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
+      allowNull: false,
     },
-    patient_id: {
+    user_id: {
       type: Sequelize.INTEGER,
       allowNull: false,
       references: {
-        model: 'Patients',
-        key: 'patient_id',
+        model: 'Users',
+        key: 'user_id',
       },
       onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
+      onDelete: 'CASCADE',
     },
     hospital_id: {
       type: Sequelize.INTEGER,
       allowNull: false,
       references: {
         model: 'Hospitals',
-        key: 'id'
+        key: 'id',
       },
       onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    },    
-    past_illnesses: {
-      type: Sequelize.TEXT,
-      allowNull: true
+      onDelete: 'CASCADE',
     },
-    diagnosis: {
-      type: Sequelize.TEXT,
-      allowNull: true
-    },
-    prescriptions: {
-      type: Sequelize.TEXT,
-      allowNull: true
+    role: {
+      type: Sequelize.ENUM('owner', 'admin', 'doctor', 'staff'),
+      allowNull: false,
+      defaultValue: 'staff',
     },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,
-      defaultValue: Sequelize.fn('NOW')
+      defaultValue: Sequelize.fn('NOW'),
     },
     updatedAt: {
       allowNull: false,
       type: Sequelize.DATE,
-      defaultValue: Sequelize.fn('NOW')
-    }
+      defaultValue: Sequelize.fn('NOW'),
+    },
   });
 }
 
 export async function down(queryInterface, Sequelize) {
-  await queryInterface.dropTable('MedicalHistories');
+  await queryInterface.dropTable('UserHospitals');
 }
-

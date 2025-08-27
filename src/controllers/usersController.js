@@ -4,7 +4,7 @@ import db from "../models/index.js";
 
 export const adminSignup = async (req, res) => {
   try {
-    const { name, email, password} = req.body;
+    const { name, email, password, contact} = req.body;
 
     const existingUser = await db.User.findOne({ where: { email } });
     if (existingUser)
@@ -16,6 +16,7 @@ export const adminSignup = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      contact,
       role: "admin",
     });
 
@@ -29,127 +30,245 @@ export const adminSignup = async (req, res) => {
 };
 
 
+// export const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+//     const user = await db.User.findOne({ where: { email } });
+//     if (!user) 
+//       return res.status(404).json({ message: "User not found" });
+
+//     const isValid = await bcrypt.compare(password, user.password);
+//     if (!isValid) 
+//       return res.status(401).json({ message: "Incorrect password" });
+
+//     const userHospitals = await db.UserHospital.findAll({
+//       where: { user_id: user.user_id },
+//       attributes: ['hospital_id', 'role']
+//     });
+
+//     const hospitals = userHospitals.map(h => ({
+//       hospital_id: h.hospital_id,
+//       role: h.role
+//     }));
+
+//     const token = jwt.sign(
+//       { id: user.user_id, role: user.role, hospitals },
+//       process.env.JWT_SECRET
+     
+//     );
+
+//     const { password: _, ...userWithoutPassword } = user.dataValues;
+
+//     res.json({
+//       token,
+//       user: userWithoutPassword,
+//       hospitals  
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+
 export const login = async (req, res) => {
-    try {
-      const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-      const user = await db.User.findOne({
-        where:{ email }
-      });
-  
-      if (!user) 
-        return res.status(404).json({ message: "User not found" });
-  
-      const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) 
-        return res.status(401).json({ message: "Incorrect password" });
-  
-      const token = jwt.sign(
-        { id: user.user_id, role: user.role, hospitalId: user.hospital_id },
-        process.env.JWT_SECRET
-        // { expiresIn: "1h" }
-      );
-  
-      const { password: _, ...userWithoutPassword } = user.dataValues;
-      res.json({ token, user: userWithoutPassword });
-          } catch (error) {
-      res.status(500).json({ message: error.message });
+    const user = await db.User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) return res.status(401).json({ message: "Incorrect password" });
+
+    const userHospitals = await db.UserHospital.findAll({
+      where: { user_id: user.user_id },
+      attributes: ["hospital_id", "role"],
+      include: [
+        {
+          model: db.Hospital,
+          as : 'hospital',
+          attributes: ["id", "name", "subdomain", "email", "phone", "address"],
+        },
+      ],
+      raw: false,
+    });
+    
+    const hospitals = userHospitals.map((uh) => ({
+      hospital_id: uh.hospital_id,
+      role: uh.role,
+      hospital: uh.hospital ? uh.hospital.dataValues : null,
+    }));
+
+    const token = jwt.sign(
+      { user_id: user.user_id, role: user.role, designation: user.designation, hospitals },
+      process.env.JWT_SECRET
+    );
+
+    const { password: _, ...userWithoutPassword } = user.dataValues;
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: userWithoutPassword,
+      hospitals,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+export const addDoctor = async (req, res) => {
+  try {
+    const adminUser = req.user;
+    const { name, email, password, specialty, contact, bio, hospital_id } = req.body;
+
+    if (!name || !email || !password || !hospital_id) {
+      return res.status(400).json({ message: "Missing Information." });
     }
-  };
-  
-  export const addDoctor = async (req, res) => {
-    try {
-      const adminId = req.user.user_id; 
 
-      console.log("Incoming request body:", req.body);
-      console.log("User from middleware:", req.user);
+    const adminHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: adminUser.user_id, hospital_id, role: "admin" }
+    });
 
-      if (!adminId) {
-        console.log("No user in request or invalid token");
-        return res.status(401).json({ message: "Unauthorized, invalid token." });
-      }
-      const admin = await db.User.findByPk(adminId);
+    if (!adminHospitalRecord) {
+      return res.status(403).json({ message: "You are not authorized to manage this hospital." });
+    }
+
+    const existingUser = await db.User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const doctor = await db.User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "doctor",
+      specialty,
+      contact,
+      bio,
+    });
+
+    await db.UserHospital.create({
+      user_id: doctor.user_id,
+      hospital_id,
+      role: "doctor"
+    });
+
+    res.status(201).json({ message: "Doctor added successfully.", doctor });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error." });
+  }
+};
+
+
+export const getDoctors = async (req, res) => {
+  try {
+    const adminUser = req.user;
+    const hospital_id = req.query.hospital_id;
+
+    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
+    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+
+    const adminHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+    });
+
+    if (!adminHospitalRecord) {
+      return res.status(403).json({ message: "You are not authorized to access this hospital." });
+    }
+
+    const userHospitalRecords = await db.UserHospital.findAll({
+      where: { hospital_id, role: "doctor" },
+      include: {
+        model: db.User,
+        as : 'user',
+        attributes: { exclude: ["password"] },
+      },
+    });
+
+    const doctors = userHospitalRecords.map(uh => uh.user);
+    res.json({ doctors });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+  // export const addStaff = async (req, res) => {
+  //   try {
+  //     const adminId = req.user.user_id; 
+
+  //     console.log("Incoming request body:", req.body);
+  //     console.log("User from middleware:", req.user);
+
+  //     if (!adminId) {
+  //       console.log("No user in request or invalid token");
+  //       return res.status(401).json({ message: "Unauthorized, invalid token." });
+  //     }
+  //     const admin = await db.User.findByPk(adminId);
 
       
   
-      if (!admin || admin.role !== "admin") {
-      console.log("Admin not found or role invalid:", admin);
-      return res.status(403).json({ message: "Unauthorized." });
-    }
+  //     if (!admin || admin.role !== "admin") {
+  //     console.log("Admin not found or role invalid:", admin);
+  //     return res.status(403).json({ message: "Unauthorized." });
+  //   }
 
   
-      const { name, email, password, specialty, contact, bio } = req.body;
+  //     const { name, email, password, contact, designation } = req.body;
   
-      if (!name || !email || !password) {
-        return res.status(400).json({ message: "Name, email, and password are required." });
-      }
+  //     if (!name || !email || !password) {
+  //       return res.status(400).json({ message: "Name, email, and password are required." });
+  //     }
   
-      const existingUser = await db.User.findOne({ where: { email } });
-      if (existingUser) return res.status(400).json({ message: "Email already registered." });
+  //     const existingUser = await db.User.findOne({ where: { email } });
+  //     if (existingUser) return res.status(400).json({ message: "Email already registered." });
   
-      const hashedPassword = await bcrypt.hash(password, 10);
+  //     const hashedPassword = await bcrypt.hash(password, 10);
   
-      const doctor = await db.User.create({
-        name,
-        email,
-        password: hashedPassword,
-        role: "doctor",
-        hospital_id: admin.hospital_id, 
-        specialty,
-        contact,
-        bio,
-      });
+  //     const staff = await db.User.create({
+  //       name,
+  //       email,
+  //       password: hashedPassword,
+  //       role: "staff",
+  //       hospital_id: admin.hospital_id, 
+  //       contact,
+  //       designation,
+  //     });
   
-      res.status(201).json({ message: "Doctor added successfully.", doctor });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error." });
-    }
-  };
-  
-
-  export const getDoctors = async (req, res) => {
-    try {
-      const adminId = req.user?.user_id;
-      if (!adminId) 
-        return res.status(401).json({ message: "Unauthorized" });
-  
-      const doctors = await db.User.findAll({
-        where: { hospital_id: req.user.hospital_id, role: "doctor" },
-        attributes: { exclude: ["password"] }
-
-      });
-  
-      res.json({ doctors });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
-    }
-  };
-  
+  //     res.status(201).json({ message: "Staff added successfully.", staff });
+  //   } catch (err) {
+  //     console.error(err);
+  //     res.status(500).json({ message: "Server error." });
+  //   }
+  // };
 
   export const addStaff = async (req, res) => {
     try {
-      const adminId = req.user.user_id; 
-
-      console.log("Incoming request body:", req.body);
-      console.log("User from middleware:", req.user);
-
-      if (!adminId) {
-        console.log("No user in request or invalid token");
-        return res.status(401).json({ message: "Unauthorized, invalid token." });
+      const adminUser = req.user; 
+      const { hospital_id, name, email, password, contact, designation } = req.body;
+  
+      if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
+      if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+  
+      const adminHospitalRecord = await db.UserHospital.findOne({
+        where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+      });
+  
+      if (!adminHospitalRecord) {
+        return res.status(403).json({ message: "You are not authorized to manage this hospital." });
       }
-      const admin = await db.User.findByPk(adminId);
-
-      
-  
-      if (!admin || admin.role !== "admin") {
-      console.log("Admin not found or role invalid:", admin);
-      return res.status(403).json({ message: "Unauthorized." });
-    }
-
-  
-      const { name, email, password, contact, designation } = req.body;
   
       if (!name || !email || !password) {
         return res.status(400).json({ message: "Name, email, and password are required." });
@@ -160,74 +279,181 @@ export const login = async (req, res) => {
   
       const hashedPassword = await bcrypt.hash(password, 10);
   
-      const staff = await db.User.create({
+      const staffUser = await db.User.create({
         name,
         email,
         password: hashedPassword,
         role: "staff",
-        hospital_id: admin.hospital_id, 
         contact,
         designation,
       });
   
-      res.status(201).json({ message: "Staff added successfully.", staff });
+      await db.UserHospital.create({
+        user_id: staffUser.user_id,
+        hospital_id,
+        role: "staff",
+      });
+  
+      const { password: _, ...staffWithoutPassword } = staffUser.dataValues;
+
+      res.status(201).json({ message: "Staff added successfully.", staff: staffWithoutPassword });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Server error." });
     }
   };
   
+  
+
+  // export const getStaff = async (req, res) => {
+  //   try {
+  //     const adminId = req.user?.user_id;
+
+  //     if (!adminId) 
+  //       return res.status(401).json({ message: "Unauthorized" });
+
+  //     if (req.user.role !== "admin") {
+  //       return res.status(403).json({ message: "Unauthorized" });
+  //     }
+  
+  //     const staff = await db.User.findAll({
+  //       where: { hospital_id: req.user.hospital_id, role: "staff" },
+  //       attributes: { exclude: ["password"] },
+  //     });
+  
+  //     res.json({ staff });
+  //   } catch (err) {
+  //     console.error(err);
+  //     res.status(500).json({ message: "Server error" });
+  //   }
+  // };
 
   export const getStaff = async (req, res) => {
     try {
-      const adminId = req.user?.user_id;
+      const adminUser = req.user;
+      const hospital_id = req.query.hospital_id;
 
-      if (!adminId) 
-        return res.status(401).json({ message: "Unauthorized" });
-
-      if (req.user.role !== "admin") {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
+      if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
+      if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
   
-      const staff = await db.User.findAll({
-        where: { hospital_id: req.user.hospital_id, role: "staff" },
-        attributes: { exclude: ["password"] },
+      const adminHospitalRecord = await db.UserHospital.findOne({
+        where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
       });
   
+      if (!adminHospitalRecord) {
+        return res.status(403).json({ message: "You are not authorized to access this hospital." });
+      }
+  
+      const userHospitalRecords = await db.UserHospital.findAll({
+        where: { hospital_id, role: "staff" },
+        include: {
+          model: db.User,
+          as : 'user',
+          attributes: { exclude: ["password"] },
+        },
+      });
+  
+      const staff = userHospitalRecords.map(uh => uh.user);
       res.json({ staff });
+  
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: "Server error" });
     }
   };
-
+  
   // Update Doctor or Staff
-export const updateUser = async (req, res) => {
-  try {
-    const adminId = req.user?.user_id;
+// export const updateUser = async (req, res) => {
+//   try {
+//     const adminId = req.user?.user_id;
 
-    if (!adminId) 
-      return res.status(401).json({ message: "Unauthorized" });
+//     if (!adminId) 
+//       return res.status(401).json({ message: "Unauthorized" });
 
-    const admin = await db.User.findByPk(adminId);
+//     const admin = await db.User.findByPk(adminId);
 
-    if (!admin || admin.role !== "admin") {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+//     if (!admin || admin.role !== "admin") {
+//       return res.status(403).json({ message: "Unauthorized" });
+//     }
 
-    const { id } = req.params; 
-    const { name, email, password, specialty, contact, bio, designation } = req.body;
+//     const { id } = req.params; 
+//     const { name, email, password, specialty, contact, bio, designation } = req.body;
 
-    const user = await db.User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+//     const user = await db.User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
 
   
-    if (user.role !== "doctor" && user.role !== "staff") {
-      return res.status(400).json({ message: "Only doctor or staff can be updated" });
+//     if (user.role !== "doctor" && user.role !== "staff") {
+//       return res.status(400).json({ message: "Only doctor or staff can be updated" });
+//     }
+
+
+//     if (email && email !== user.email) {
+//       const existing = await db.User.findOne({ where: { email } });
+//       if (existing) return res.status(400).json({ message: "Email already in use" });
+//     }
+
+//     let updatedPassword = user.password;
+//     if (password) {
+//       updatedPassword = await bcrypt.hash(password, 10);
+//     }
+
+
+//     await user.update({
+//       name: name || user.name,
+//       email: email || user.email,
+//       password: updatedPassword,
+//       contact: contact || user.contact,
+//       // doctor-specific
+//       specialty: user.role === "doctor" ? specialty || user.specialty : null,
+//       bio: user.role === "doctor" ? bio || user.bio : null,
+//       // staff-specific
+//       designation: user.role === "staff" ? designation || user.designation : null,
+//     });
+
+//     const { password: _, ...userWithoutPassword } = user.dataValues;
+
+//     res.json({ message: "User updated successfully", user: userWithoutPassword });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+
+export const updateUser = async (req, res) => {
+  try {
+    const adminUser = req.user;
+    const { hospital_id } = req.body; 
+
+    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
+    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+
+    const adminHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+    });
+
+    if (!adminHospitalRecord) {
+      return res.status(403).json({ message: "You are not authorized to update users in this hospital." });
     }
 
+    const { id } = req.params;
+    const { name, email, password, specialty, contact, bio, designation } = req.body;
+
+    const targetRecord = await db.UserHospital.findOne({
+      where: { user_id: id, hospital_id, role: ["doctor", "staff"] },
+      include: { model: db.User,
+       as : 'user'
+       },
+    });
+
+    if (!targetRecord) {
+      return res.status(404).json({ message: "User not found in this hospital" });
+    }
+
+    const user = targetRecord.user;
 
     if (email && email !== user.email) {
       const existing = await db.User.findOne({ where: { email } });
@@ -235,25 +461,19 @@ export const updateUser = async (req, res) => {
     }
 
     let updatedPassword = user.password;
-    if (password) {
-      updatedPassword = await bcrypt.hash(password, 10);
-    }
-
+    if (password) updatedPassword = await bcrypt.hash(password, 10);
 
     await user.update({
       name: name || user.name,
       email: email || user.email,
       password: updatedPassword,
       contact: contact || user.contact,
-      // doctor-specific
       specialty: user.role === "doctor" ? specialty || user.specialty : null,
       bio: user.role === "doctor" ? bio || user.bio : null,
-      // staff-specific
       designation: user.role === "staff" ? designation || user.designation : null,
     });
 
     const { password: _, ...userWithoutPassword } = user.dataValues;
-
     res.json({ message: "User updated successfully", user: userWithoutPassword });
   } catch (err) {
     console.error(err);
@@ -261,25 +481,65 @@ export const updateUser = async (req, res) => {
   }
 };
 
+// export const deleteUser = async (req, res) => {
+//   try {
+
+//     const adminId = req.user?.user_id;
+
+//     if (!adminId) 
+//       return res.status(401).json({ message: "Unauthorized" });
+
+//     const admin = await db.User.findByPk(adminId);
+
+//     if (!admin || admin.role !== "admin") {
+//       return res.status(403).json({ message: "Unauthorized" });
+//     }
+//     const { id } = req.params;
+
+//     const user = await db.User.findByPk(id);
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     await user.destroy();
+
+//     res.json({ message: "User deleted successfully" });
+//   } catch (err) {
+//     console.error("Delete user error:", err);
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
+
 export const deleteUser = async (req, res) => {
   try {
+    const adminUser = req.user;
+    const hospital_id = req.query.hospital_id;
 
-    const adminId = req.user?.user_id;
+    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
+    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
 
-    if (!adminId) 
-      return res.status(401).json({ message: "Unauthorized" });
+    const adminHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+    });
 
-    const admin = await db.User.findByPk(adminId);
-
-    if (!admin || admin.role !== "admin") {
-      return res.status(403).json({ message: "Unauthorized" });
+    if (!adminHospitalRecord) {
+      return res.status(403).json({ message: "You are not authorized to delete users in this hospital." });
     }
+
     const { id } = req.params;
 
-    const user = await db.User.findByPk(id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const targetRecord = await db.UserHospital.findOne({
+      where: { user_id: id, hospital_id, role: ["doctor", "staff"] },
+      include: { model: db.User,
+        as: 'user'
+       },
+    });
+
+    if (!targetRecord) {
+      return res.status(404).json({ message: "User not found in this hospital" });
     }
+
+    const user = targetRecord.user;
 
     await user.destroy();
 

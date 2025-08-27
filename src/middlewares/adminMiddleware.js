@@ -11,7 +11,7 @@ export const isAdmin = (req, res, next) => {
         return res.status(403).json({ message: "Access denied. Admins only." });
       }
   
-      next(); // ✅ Allow request to continue
+      next();
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Server error in isAdmin middleware" });

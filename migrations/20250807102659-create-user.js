@@ -10,16 +10,16 @@ export async function up(queryInterface, Sequelize) {
         primaryKey: true,
         allowNull: false,
       },
-      hospital_id: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        references: {
-          model: 'Hospitals', // exact table name
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
+      // hospital_id: {
+      //   type: Sequelize.INTEGER,
+      //   allowNull: true,
+      //   references: {
+      //     model: 'Hospitals', // exact table name
+      //     key: 'id',
+      //   },
+      //   onUpdate: 'CASCADE',
+      //   onDelete: 'CASCADE',
+      // },
       // role_id: {
       //   type: Sequelize.INTEGER,
       //   allowNull: false,

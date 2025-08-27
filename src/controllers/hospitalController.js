@@ -10,9 +10,9 @@ export const registerHospital = async (req, res) => {
       return res.status(403).json({ message: "Admins only." });
     }
 
-    if (adminUser.hospital_id) {
-      return res.status(400).json({ message: "You can register only one hospital for now." });
-    }
+    // if (adminUser.hospital_id) {
+    //   return res.status(400).json({ message: "You can register only one hospital for now." });
+    // }
 
     const sanitized = sanitizeSubdomain(subdomain);
     if (!isValidSubdomain(sanitized)) {
@@ -48,7 +48,14 @@ export const registerHospital = async (req, res) => {
     });
 
     
-    adminUser.hospital_id = newHospital.id;
+    // adminUser.hospital_id = newHospital.id;
+
+    await db.UserHospital.create({
+      user_id: adminUser.user_id,
+      hospital_id: newHospital.id,
+      role: "admin"
+    });
+    
     await adminUser.save();
 
     res.status(201).json({
@@ -98,13 +105,78 @@ export const getBySubdomain = async (req, res) => {
   }
 };
 
+// export const getMyHospital = async (req, res) => {
+//   try {
+//     const adminUser = req.user;
+//     if (!adminUser?.hospital_id)
+//       return res.status(404).json({ message: "No hospital assigned" });
+
+//     const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
+//     return res.json({ hospital });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// export const getMyHospital = async (req, res) => {
+//   try {
+//     const user = req.user; 
+//     if (!user) {
+//       return res.status(403).json({ message: "Unauthorized" });
+//     }
+//     const userHospitals = await db.UserHospital.findAll({
+//       where: { user_id: user.id },
+//       include: [{ model: db.Hospital }]
+//     });
+
+//     if (!userHospitals || userHospitals.length === 0) {
+//       return res.status(404).json({ message: "No hospitals assigned" });
+//     }
+
+//     const hospitals = userHospitals.map(uh => ({
+//       hospital_id: uh.hospital.id,
+//       name: uh.hospital.name,
+//       subdomain: uh.hospital.subdomain,
+//       role: uh.role
+//     }));
+
+//     return res.json({ hospitals });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// GET /api/hospital/:hospital_id
 export const getMyHospital = async (req, res) => {
   try {
-    const adminUser = req.user;
-    if (!adminUser?.hospital_id)
-      return res.status(404).json({ message: "No hospital assigned" });
+    const user = req.user;
+    if (!user) return res.status(403).json({ message: "Unauthorized" });
+    console.log(user.id);
 
-    const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
+    const { hospital_id } = req.params; // URL se hospital_id
+
+    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+
+    const userHospital = await db.UserHospital.findOne({
+      where: { user_id: user.dataValues.user_id, hospital_id },
+      include: [{ model: db.Hospital,
+        as :'hospital'
+
+       }]
+    });
+
+    if (!userHospital)
+      return res.status(404).json({ message: "Hospital not found or access denied" });
+
+    const hospital = {
+      hospital_id: userHospital.hospital.id,
+      name: userHospital.hospital.name,
+      subdomain: userHospital.hospital.subdomain,
+      role: userHospital.role
+    };
+
     return res.json({ hospital });
   } catch (error) {
     console.error(error);
@@ -113,19 +185,57 @@ export const getMyHospital = async (req, res) => {
 };
 
 
+// export const checkHospital = async (req, res) => {
+//   try {
+//     const adminUser = req.user;
+
+//     if (!adminUser?.hospital_id) {
+//       return res.json({ hasHospital: false });
+//     }
+
+//     const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
+    
+//     return res.json({ hasHospital: !!hospital, hospital });
+//   } catch (err) {
+//     console.error("checkHospital error:", err);
+//     return res.status(500).json({ error: "Server error" });
+//   }
+// };
+
 export const checkHospital = async (req, res) => {
   try {
-    const adminUser = req.user;
+    const user = req.user; 
 
-    if (!adminUser?.hospital_id) {
-      return res.json({ hasHospital: false });
+    if (!user) {
+      return res.status(403).json({ error: "Unauthorized" });
     }
 
-    const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
+    const userHospitals = await db.UserHospital.findAll({
+      where: { user_id: user.dataValues.user_id },
+      include: [{
+        model: db.Hospital ,
+        as : 'hospital',
+        attributes: ["id", "name", "subdomain", "email", "phone", "address"]
+      }]
+    });
+
+    if (!userHospitals || userHospitals.length === 0) {
+      return res.json({ hasHospital: false, hospitals: [] });
+    }
+
+    const hospitals = userHospitals.map(uh => ({
+      id: uh.hospital.id,
+      name: uh.hospital.name,
+      subdomain: uh.hospital.subdomain,
+      address: uh.hospital.address, 
+      role: uh.role,
+    }));
     
-    return res.json({ hasHospital: !!hospital, hospital });
+
+    return res.json({ hasHospital: true, hospitals });
   } catch (err) {
-    console.error("checkHospital error:", err);
+    console.error("checkHospitals error:", err);
     return res.status(500).json({ error: "Server error" });
   }
 };
+
