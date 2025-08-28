@@ -3,11 +3,7 @@ import { Model } from 'sequelize';
 
 export default (sequelize, DataTypes) => {
   class Appointment extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+   
     static associate(models) {
       Appointment.belongsTo(models.Patient, {
         foreignKey: 'patient_id',
@@ -21,6 +17,14 @@ export default (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+
+      Appointment.belongsTo(models.User, {
+        foreignKey: 'created_by',
+        as: 'Receptionist',
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      });
+      
 
       // Appointment has one VisitNote
       Appointment.hasOne(models.VisitNote, {
@@ -68,10 +72,19 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: false
       },
+      duration_minutes: {
+        type: DataTypes.INTEGER,
+        defaultValue: 30
+      },
       status: {
         type: DataTypes.ENUM('Scheduled', 'Completed', 'Cancelled'),
         defaultValue: 'Scheduled'
-      }
+      },
+      created_by: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+      },
+      
     },
     {
       sequelize,

@@ -12,10 +12,20 @@ export default (sequelize, DataTypes) => {
       //   as: 'hospitals',
       // });
 
+      User.hasMany(models.DoctorAvailability, {
+        foreignKey: "doctor_id",
+        as: "availabilities"
+      });
+
       User.hasMany(models.UserHospital, {
         foreignKey: 'user_id',
         as: 'userHospitals',
       });
+
+      User.hasMany(models.Appointment,
+         { as: "ReceptionistAppointments", 
+          foreignKey: "created_by" 
+        });
       
 
       User.hasMany(models.Appointment, {

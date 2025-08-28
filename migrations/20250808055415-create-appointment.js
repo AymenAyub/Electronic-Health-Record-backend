@@ -1,8 +1,7 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-
- export async function up(queryInterface, Sequelize) {
+export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('Appointments', {
     appointment_id: {
       type: Sequelize.INTEGER,
@@ -40,13 +39,34 @@
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE'
     },
-    appointment_time: {
-      type: Sequelize.DATE,
+
+    // ✅ New fields
+    appointment_date: {
+      type: Sequelize.DATEONLY,
       allowNull: false,
     },
+    start_time: {
+      type: Sequelize.TIME,
+      allowNull: false,
+    },
+    end_time: {
+      type: Sequelize.TIME,
+      allowNull: false,
+    },
+
     status: {
       type: Sequelize.ENUM('Scheduled', 'Completed', 'Cancelled'),
       defaultValue: 'Scheduled',
+    },
+    created_by: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Users',
+        key: 'user_id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL'   // agar receptionist delete ho jaye to appointment rahe lekin created_by null ho jaye
     },
     createdAt: {
       allowNull: false,
@@ -59,7 +79,16 @@
       defaultValue: Sequelize.fn('NOW'),
     }
   });
+
+  // ✅ Prevent overlapping appointments for the same doctor at the same date+time
+  await queryInterface.addConstraint('Appointments', {
+    fields: ['doctor_id', 'appointment_date', 'start_time', 'end_time'],
+    type: 'unique',
+    name: 'unique_doctor_appointment_slot'
+  });
 }
+
 export async function down(queryInterface, Sequelize) {
+  await queryInterface.removeConstraint('Appointments', 'unique_doctor_appointment_slot');
   await queryInterface.dropTable('Appointments');
 }

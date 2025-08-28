@@ -22,6 +22,11 @@ export default (sequelize, DataTypes) => {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       });
+
+      Hospital.hasMany(models.DoctorAvailability, {
+        foreignKey: "hospital_id",
+        as: "availabilities",
+      });
     }
   }
 

@@ -105,50 +105,6 @@ export const getBySubdomain = async (req, res) => {
   }
 };
 
-// export const getMyHospital = async (req, res) => {
-//   try {
-//     const adminUser = req.user;
-//     if (!adminUser?.hospital_id)
-//       return res.status(404).json({ message: "No hospital assigned" });
-
-//     const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
-//     return res.json({ hospital });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// export const getMyHospital = async (req, res) => {
-//   try {
-//     const user = req.user; 
-//     if (!user) {
-//       return res.status(403).json({ message: "Unauthorized" });
-//     }
-//     const userHospitals = await db.UserHospital.findAll({
-//       where: { user_id: user.id },
-//       include: [{ model: db.Hospital }]
-//     });
-
-//     if (!userHospitals || userHospitals.length === 0) {
-//       return res.status(404).json({ message: "No hospitals assigned" });
-//     }
-
-//     const hospitals = userHospitals.map(uh => ({
-//       hospital_id: uh.hospital.id,
-//       name: uh.hospital.name,
-//       subdomain: uh.hospital.subdomain,
-//       role: uh.role
-//     }));
-
-//     return res.json({ hospitals });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// GET /api/hospital/:hospital_id
 export const getMyHospital = async (req, res) => {
   try {
     const user = req.user;
@@ -184,23 +140,6 @@ export const getMyHospital = async (req, res) => {
   }
 };
 
-
-// export const checkHospital = async (req, res) => {
-//   try {
-//     const adminUser = req.user;
-
-//     if (!adminUser?.hospital_id) {
-//       return res.json({ hasHospital: false });
-//     }
-
-//     const hospital = await db.Hospital.findByPk(adminUser.hospital_id);
-    
-//     return res.json({ hasHospital: !!hospital, hospital });
-//   } catch (err) {
-//     console.error("checkHospital error:", err);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// };
 
 export const checkHospital = async (req, res) => {
   try {

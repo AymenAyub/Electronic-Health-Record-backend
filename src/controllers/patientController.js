@@ -19,6 +19,16 @@ export const addPatient = async (req, res) => {
       return res.status(403).json({ message: "You are not authorized to add patients to this hospital." });
     }
 
+    if (CNIC) {
+      const existingPatient = await db.Patient.findOne({
+        where: { CNIC, hospital_id },
+      });
+
+      if (existingPatient) {
+        return res.status(400).json({ message: "Patient with this CNIC already exists in this hospital." });
+      }
+    }
+
     const newPatient = await db.Patient.create({
       hospital_id,
       name,
