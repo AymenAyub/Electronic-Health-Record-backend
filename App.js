@@ -7,6 +7,7 @@ import hospitalRoutes from "./src/routes/hospitalRoutes.js";
 import dashboardRoutes from "./src/routes/DashboardRoutes.js";
 import patientRoutes from "./src/routes/patientRoutes.js";
 import appointmentRoutes from "./src/routes/appointmentRoutes.js";
+import doctorAvailabilityRoutes from "./src/routes/doctorAvailabilityRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/api/hospital", hospitalRoutes);
 app.use("/api",dashboardRoutes)
 app.use("/api",patientRoutes);
 app.use("/api", appointmentRoutes);
+app.use("/api", doctorAvailabilityRoutes);
 
 db.sequelize.sync({ alter: true })
   .then(() => {

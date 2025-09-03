@@ -137,7 +137,7 @@ export const getDoctors = async (req, res) => {
     if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
 
     const adminHospitalRecord = await db.UserHospital.findOne({
-      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+      where: { user_id: adminUser.user_id, hospital_id},
     });
 
     if (!adminHospitalRecord) {

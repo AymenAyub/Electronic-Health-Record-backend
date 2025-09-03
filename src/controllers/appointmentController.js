@@ -1,119 +1,267 @@
 import db from "../models/index.js";
 import { Op } from "sequelize";
 
+const Appointment = db.Appointment;
+const DoctorAvailability = db.DoctorAvailability;
+const Patient = db.Patient;
+const User = db.User;
+
 export const scheduleAppointment = async (req, res) => {
   try {
-    const user = req.user; 
+    const user=req.user;
+    const { hospital_id, patient_id, doctor_id, appointment_date, start_time } = req.body;
 
-    const { hospital_id, patient_id, doctor_id, appointment_time, duration_minutes } = req.body;
+    const patient = await Patient.findByPk(patient_id);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
 
-    if (!hospital_id || !patient_id || !doctor_id || !appointment_time) {
-      return res.status(400).json({ message: "All required fields must be provided" });
-    }
+    const doctor = await User.findByPk(doctor_id);
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
-    const userHospital = await db.UserHospital.findOne({
-      where: { user_id: user.user_id, hospital_id },
+    const [hours, minutes, seconds] = start_time.split(":").map(Number);
+    const startDateTime = new Date(appointment_date);
+    startDateTime.setHours(hours, minutes, seconds || 0, 0);
+
+   
+
+    if (startDateTime < new Date()) {
+    return res.status(400).json({ message: "Cannot book an appointment in the past" });
+  }
+
+    const dayOfWeek = startDateTime.getDay();
+    const availability = await DoctorAvailability.findOne({
+      where: { doctor_id, day_of_week: dayOfWeek },
     });
+    if (!availability) return res.status(400).json({ message: "Doctor not available on this day" });
 
-    if (!userHospital) {
-      return res.status(403).json({ message: "You do not have access to this hospital" });
+    
+    const duration_minutes = availability.slot_duration || 30;
+    const endDateTime = new Date(startDateTime.getTime() + (duration_minutes || 30) * 60000);
+
+    const end_time = endDateTime.toTimeString().split(" ")[0]; 
+
+    const slotMinutes = startDateTime.getMinutes() % duration_minutes;
+    if (slotMinutes !== 0) {
+      return res.status(400).json({ message: `Appointment must align with ${duration_minutes}-minute slots` });
     }
 
-    if (user.role !== "staff") {
-      return res.status(403).json({ message: "Only staff can schedule appointments" });
-    }
-
-    const patient = await db.Patient.findOne({ where: { patient_id, hospital_id } });
-    if (!patient) {
-      return res.status(404).json({ message: "Patient not found in this hospital" });
-    }
-
-    const doctorHospital = await db.UserHospital.findOne({
-      where: { user_id: doctor_id, hospital_id },
-    });
-    if (!doctorHospital) {
-      return res.status(404).json({ message: "Doctor not found in this hospital" });
-    }
-
-    const existingAppointment = await db.Appointment.findOne({
+    const conflict = await Appointment.findOne({
       where: {
-        hospital_id,
         doctor_id,
-        appointment_time,
-      },
+        appointment_date,
+        [Op.or]: [
+          {
+            start_time: {
+              [Op.between]: [
+                startDateTime.toTimeString().split(" ")[0],
+                endDateTime.toTimeString().split(" ")[0]
+              ]
+            }
+          },
+          {
+            end_time: {
+              [Op.between]: [
+                startDateTime.toTimeString().split(" ")[0],
+                endDateTime.toTimeString().split(" ")[0]
+              ]
+            }
+          },
+          {
+            [Op.and]: [
+              { start_time: { [Op.lte]: startDateTime.toTimeString().split(" ")[0] } },
+              { end_time: { [Op.gte]: endDateTime.toTimeString().split(" ")[0] } }
+            ]
+          }
+        ]
+      }
     });
+    
+    if (conflict) return res.status(400).json({ message: "Doctor already booked at this time" });
 
-    if (existingAppointment) {
-      return res.status(400).json({ message: "Doctor already has an appointment at this time" });
-    }
-
-    const appointment = await db.Appointment.create({
+    const newAppointment = await Appointment.create({
       hospital_id,
       patient_id,
       doctor_id,
-      appointment_time,
-      duration_minutes: duration_minutes || 30,
+      appointment_date,
+      start_time,
+      end_time,
       created_by: user.user_id,
       status: "Scheduled",
     });
 
-    return res.status(201).json({
-      message: "Appointment scheduled successfully",
-      data: appointment,
-    });
+    res.status(201).json({ message: "Appointment created successfully", data: newAppointment });
 
   } catch (error) {
-    console.error("Error scheduling appointment:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error creating appointment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 export const getAppointments = async (req, res) => {
   try {
     const user = req.user;
-    const { hospital_id, doctor_id, patient_id, date } = req.query;
+    const hospital_id = Number(req.query.hospital_id);
+    console.log("Query params:", req.query);
 
     if (!hospital_id) {
       return res.status(400).json({ message: "hospital_id is required" });
     }
 
-    // Check if user has access to this hospital
-    const userHospital = await db.UserHospital.findOne({
-      where: { user_id: user.user_id, hospital_id },
-    });
-
-    if (!userHospital) {
-      return res.status(403).json({ message: "You do not have access to this hospital" });
-    }
-
-    // Build query dynamically
-    const whereClause = { hospital_id };
-
-    if (doctor_id) whereClause.doctor_id = doctor_id;
-    if (patient_id) whereClause.patient_id = patient_id;
-
-    if (date) {
-      // Filter by date (all appointments on that day)
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-
-      whereClause.appointment_time = { [Op.between]: [start, end] };
-    }
-
-    const appointments = await db.Appointment.findAll({
-      where: whereClause,
+    const appointments = await Appointment.findAll({
+      where: { hospital_id },
       include: [
-        { model: db.Patient, attributes: ["name", "age", "gender", "contact"] },
-        { model: db.User, as: "doctor", attributes: ["name"] },
+        {
+          model: Patient,
+          attributes: ["patient_id", "name"],
+        },
+        {
+          model: User,
+          as: "Doctor",
+          attributes: ["user_id", "name"],
+        },
       ],
-      order: [["appointment_time", "ASC"]],
+      order: [["appointment_date", "ASC"], ["start_time", "ASC"]],
     });
 
-    return res.status(200).json({ appointments });
+    const formatted = appointments.map((apt) => ({
+      id: apt.appointment_id,
+      appointment_date: apt.appointment_date,
+      start_time: apt.start_time,
+      end_time: apt.end_time,
+      status: apt.status,
+      patient_id: apt.patient_id,
+      patient_name: apt.Patient?.name || "Unknown",
+      doctor_id: apt.doctor_id,
+      doctor_name: apt.Doctor?.name || "Unknown",
+    }));
+
+    res.status(200).json({ message: "Appointments fetched successfully", appointments: formatted });
   } catch (error) {
     console.error("Error fetching appointments:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const updateAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { appointment_date, start_time, doctor_id, patient_id, status } = req.body;
+
+    console.log(appointmentId)
+     if (!appointmentId) {
+      return res.status(404).json({ message: "No appointment Id" });
+    }
+
+    const appointment = await Appointment.findByPk(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    const doctor = await User.findByPk(doctor_id || appointment.doctor_id);
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+
+    if (patient_id) {
+      const patient = await Patient.findByPk(patient_id);
+      if (!patient) return res.status(404).json({ message: "Patient not found" });
+    }
+
+    if (status) {
+      const allowedStatuses = ["Scheduled", "Completed", "Cancelled"];
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      appointment.status = status;
+    }
+
+ 
+    if (appointment_date && start_time) {
+      const [hours, minutes, seconds] = start_time.split(":").map(Number);
+      const startDateTime = new Date(appointment_date);
+      startDateTime.setHours(hours, minutes, seconds || 0, 0);
+
+      const dayOfWeek = startDateTime.getDay();
+      const availability = await DoctorAvailability.findOne({
+        where: { doctor_id: doctor_id || appointment.doctor_id, day_of_week: dayOfWeek },
+      });
+      if (!availability) {
+        return res.status(400).json({ message: "Doctor not available on this day" });
+      }
+
+      const duration_minutes = availability.slot_duration || 30;
+      const endDateTime = new Date(startDateTime.getTime() + duration_minutes * 60000);
+      const end_time = endDateTime.toTimeString().split(" ")[0];
+
+      const slotMinutes = startDateTime.getMinutes() % duration_minutes;
+      if (slotMinutes !== 0) {
+        return res.status(400).json({ message: `Appointment must align with ${duration_minutes}-minute slots` });
+      }
+
+      const conflict = await Appointment.findOne({
+        where: {
+          doctor_id: doctor_id || appointment.doctor_id,
+          appointment_date,
+          appointment_id: { [Op.ne]: appointmentId }, 
+          status: { [Op.ne]: "Cancelled" },
+          [Op.or]: [
+            {
+              start_time: {
+                [Op.between]: [
+                  startDateTime.toTimeString().split(" ")[0],
+                  endDateTime.toTimeString().split(" ")[0]
+                ]
+              }
+            },
+            {
+              end_time: {
+                [Op.between]: [
+                  startDateTime.toTimeString().split(" ")[0],
+                  endDateTime.toTimeString().split(" ")[0]
+                ]
+              }
+            },
+            {
+              [Op.and]: [
+                { start_time: { [Op.lte]: startDateTime.toTimeString().split(" ")[0] } },
+                { end_time: { [Op.gte]: endDateTime.toTimeString().split(" ")[0] } }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (conflict) {
+        return res.status(400).json({ message: "Doctor already booked at this time" });
+      }
+      appointment.appointment_date = appointment_date;
+      appointment.start_time = start_time;
+      appointment.end_time = end_time;
+      if (doctor_id) appointment.doctor_id = doctor_id;
+    }
+
+    if (patient_id) appointment.patient_id = patient_id;
+
+    await appointment.save();
+
+    res.status(200).json({ message: "Appointment updated successfully", data: appointment });
+  } catch (error) {
+    console.error("Error updating appointment:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getDoctorAppointments = async (req, res) => {
+  try {
+    const doctorId = req.user.user_id;
+    const appointments = await Appointment.findAll({
+      where: { doctor_id: doctorId },
+      order: [
+        ["appointment_date", "ASC"],
+        ["start_time", "ASC"]
+      ],
+    });
+    res.status(200).json({ appointments });
+  } catch (error) {
+    console.error("Error fetching doctor's appointments:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

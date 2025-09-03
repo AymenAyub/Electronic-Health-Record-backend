@@ -79,16 +79,9 @@ export async function up(queryInterface, Sequelize) {
       defaultValue: Sequelize.fn('NOW'),
     }
   });
-
-  // ✅ Prevent overlapping appointments for the same doctor at the same date+time
-  await queryInterface.addConstraint('Appointments', {
-    fields: ['doctor_id', 'appointment_date', 'start_time', 'end_time'],
-    type: 'unique',
-    name: 'unique_doctor_appointment_slot'
-  });
+ 
 }
 
 export async function down(queryInterface, Sequelize) {
-  await queryInterface.removeConstraint('Appointments', 'unique_doctor_appointment_slot');
   await queryInterface.dropTable('Appointments');
 }

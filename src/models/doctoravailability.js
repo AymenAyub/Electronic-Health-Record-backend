@@ -51,7 +51,7 @@ export default (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "DoctorAvailability",
-      tableName: "DoctorAvailabilities",
+      tableName: "DoctorAvailability",
     }
   );
 
