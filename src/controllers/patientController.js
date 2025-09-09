@@ -61,7 +61,7 @@ export const getPatients = async (req, res) => {
         where: {
           user_id: user.user_id,
           hospital_id,
-          role: { [Op.in]: ["admin", "staff"] },
+          role: { [Op.in]: ["admin", "staff" , "doctor"] },
         },
       });
     if (!userRecord) {

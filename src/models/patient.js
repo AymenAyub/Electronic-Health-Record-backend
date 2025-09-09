@@ -12,7 +12,7 @@ export default (sequelize, DataTypes) => {
       });
 
       // 2. Patient has one MedicalHistory
-      Patient.hasOne(models.MedicalHistory, {
+      Patient.hasMany(models.MedicalHistory, {
         foreignKey: 'patient_id',
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE'

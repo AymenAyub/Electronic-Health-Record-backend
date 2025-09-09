@@ -30,6 +30,54 @@ export const adminSignup = async (req, res) => {
 };
 
 
+// export const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+
+//     const user = await db.User.findOne({ where: { email } });
+//     if (!user) return res.status(404).json({ message: "User not found" });
+
+//     const isValid = await bcrypt.compare(password, user.password);
+//     if (!isValid) return res.status(401).json({ message: "Incorrect password" });
+
+//     const userHospitals = await db.UserHospital.findAll({
+//       where: { user_id: user.user_id },
+//       attributes: ["hospital_id", "role"],
+//       include: [
+//         {
+//           model: db.Hospital,
+//           as : 'hospital',
+//           attributes: ["id", "name", "subdomain", "email", "phone", "address"],
+//         },
+//       ],
+//       raw: false,
+//     });
+    
+//     const hospitals = userHospitals.map((uh) => ({
+//       hospital_id: uh.hospital_id,
+//       role: uh.role,
+//       hospital: uh.hospital ? uh.hospital.dataValues : null,
+//     }));
+
+//     const token = jwt.sign(
+//       { user_id: user.user_id, role: user.role, designation: user.designation },
+//       process.env.JWT_SECRET
+//     );
+
+//     const { password: _, ...userWithoutPassword } = user.dataValues;
+
+//     res.status(200).json({
+//       message: "Login successful",
+//       token,
+//       user: userWithoutPassword,
+//       hospitals,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -46,21 +94,27 @@ export const login = async (req, res) => {
       include: [
         {
           model: db.Hospital,
-          as : 'hospital',
+          as: "hospital",
           attributes: ["id", "name", "subdomain", "email", "phone", "address"],
         },
       ],
       raw: false,
     });
-    
+
     const hospitals = userHospitals.map((uh) => ({
       hospital_id: uh.hospital_id,
       role: uh.role,
       hospital: uh.hospital ? uh.hospital.dataValues : null,
     }));
 
+    const defaultHospitalId = hospitals.length > 0 ? hospitals[0].hospital_id : null;
+
     const token = jwt.sign(
-      { user_id: user.user_id, role: user.role, designation: user.designation, hospitals },
+      { 
+        user_id: user.user_id, 
+        role: user.role, 
+        designation: user.designation 
+      },
       process.env.JWT_SECRET
     );
 
@@ -71,12 +125,14 @@ export const login = async (req, res) => {
       token,
       user: userWithoutPassword,
       hospitals,
+      defaultHospitalId,
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 
 export const addDoctor = async (req, res) => {

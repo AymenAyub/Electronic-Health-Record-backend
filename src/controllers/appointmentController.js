@@ -252,14 +252,43 @@ export const updateAppointment = async (req, res) => {
 export const getDoctorAppointments = async (req, res) => {
   try {
     const doctorId = req.user.user_id;
+
+    if (!doctorId) {
+      return res.status(400).json({ message: "Doctor ID missing in token" });
+    }
+
     const appointments = await Appointment.findAll({
       where: { doctor_id: doctorId },
-      order: [
-        ["appointment_date", "ASC"],
-        ["start_time", "ASC"]
+      include: [
+        {
+          model: Patient,
+          attributes: ["patient_id", "name"],
+        },
+        {
+          model: User,
+          as: "Doctor",
+          attributes: ["user_id", "name"],
+        },
       ],
+      order: [["appointment_date", "ASC"], ["start_time", "ASC"]],
     });
-    res.status(200).json({ appointments });
+
+    const formatted = appointments.map((apt) => ({
+      id: apt.appointment_id,
+      appointment_date: apt.appointment_date,
+      start_time: apt.start_time,
+      end_time: apt.end_time,
+      status: apt.status,
+      patient_id: apt.patient_id,
+      patient_name: apt.Patient?.name || "Unknown",
+      doctor_id: apt.doctor_id,
+      doctor_name: apt.Doctor?.name || "Unknown",
+    }));
+
+    res.status(200).json({
+      message: "Doctor appointments fetched successfully",
+      appointments: formatted,
+    });
   } catch (error) {
     console.error("Error fetching doctor's appointments:", error);
     res.status(500).json({ message: "Server error", error: error.message });
