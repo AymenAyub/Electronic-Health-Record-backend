@@ -4,8 +4,7 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class RolePermission extends Model {
     static associate(models) {
-      // Relations are already handled in Role & Permission models
-      // But you can still add belongsTo for clarity if you want:
+      
       RolePermission.belongsTo(models.Role, {
         foreignKey: 'role_id',
         as: 'role'
@@ -24,7 +23,7 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'Role',
+          model: 'Roles',
           key: 'role_id'
         },
         onDelete: 'CASCADE'
@@ -33,7 +32,7 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: 'Permission',
+          model: 'Permissions',
           key: 'permission_id'
         },
         onDelete: 'CASCADE'
@@ -43,7 +42,7 @@ export default (sequelize, DataTypes) => {
       sequelize,
       modelName: 'RolePermission',
       tableName: 'RolePermissions',
-      timestamps: false, 
+      timestamps: true, 
     }
   );
 

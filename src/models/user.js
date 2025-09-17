@@ -5,13 +5,6 @@ export default (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
 
-      // User.belongsToMany(models.Hospital, {
-      //   through: 'UserHospitals',
-      //   foreignKey: 'user_id',
-      //   otherKey: 'hospital_id',
-      //   as: 'hospitals',
-      // });
-
       User.hasMany(models.DoctorAvailability, {
         foreignKey: "doctor_id",
         as: "availabilities"
@@ -35,11 +28,12 @@ export default (sequelize, DataTypes) => {
         onUpdate: 'CASCADE',
       });
 
-      // User.belongsTo(models.Role, {
-      //   foreignKey: 'role_id',
-      //   as: 'role'
-      // });
-      
+    //   User.belongsTo(models.Role, {
+    //   foreignKey: 'role_id',
+    //   as: 'role',
+    // });
+
+
     }
   }
 
@@ -51,14 +45,11 @@ export default (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false,
       },
-      // hospital_id: {
+      // role_id: {
       //   type: DataTypes.INTEGER,
-      //   allowNull: true,
+      //   allowNull: false,
       // },
-      role: {
-        type: DataTypes.ENUM('admin', 'doctor', 'staff'),
-        allowNull: false,
-      },
+
       designation: {
         type: DataTypes.STRING,
         allowNull: true, 
@@ -78,15 +69,15 @@ export default (sequelize, DataTypes) => {
       },
       specialty: {
         type: DataTypes.STRING,
-        allowNull: true, // only for doctors
+        allowNull: true, 
       },
       bio: {
         type: DataTypes.TEXT,
-        allowNull: true, // only for doctors
+        allowNull: true, 
       },
       contact: {
         type: DataTypes.STRING,
-        allowNull: true, // only for doctors
+        allowNull: true, 
       },
       
     },

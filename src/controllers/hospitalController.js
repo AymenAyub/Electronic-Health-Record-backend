@@ -1,39 +1,36 @@
 import db from "../models/index.js";
 import { sanitizeSubdomain, isValidSubdomain } from "../utils/sanitizeSubdomain.js";
 
+
 export const registerHospital = async (req, res) => {
   try {
-    const adminUser = req.user;
+    const user = req.user; 
     const { name, email, subdomain, phone, address } = req.body;
 
-    if (!adminUser || adminUser.role !== "admin") {
-      return res.status(403).json({ message: "Admins only." });
+    const ownerRole = await db.Role.findOne({ where: { name: "Owner" } });
+    if (!ownerRole) {
+      return res.status(500).json({ message: "Owner role not found, seed it first." });
     }
 
-    // if (adminUser.hospital_id) {
-    //   return res.status(400).json({ message: "You can register only one hospital for now." });
-    // }
+    const userHospital = await db.UserHospital.findOne({
+      where: { user_id: user.user_id, role_id: ownerRole.role_id }
+    });
+
+    if (!userHospital) {
+      return res.status(403).json({ message: "Only Owners can register hospitals" });
+    }
 
     const sanitized = sanitizeSubdomain(subdomain);
     if (!isValidSubdomain(sanitized)) {
       return res.status(400).json({ message: "Invalid subdomain format." });
     }
 
-    const existingSubdomain = await db.Hospital.findOne({
-      where: {
-        subdomain: sanitized
-      }
-    });
+    const existingSubdomain = await db.Hospital.findOne({ where: { subdomain: sanitized } });
     if (existingSubdomain) {
       return res.status(409).json({ message: "Subdomain already taken" });
     }
 
-
-    const existingEmail = await db.Hospital.findOne({
-      where: {
-       email:email
-      }
-    });
+    const existingEmail = await db.Hospital.findOne({ where: { email } });
     if (existingEmail) {
       return res.status(409).json({ message: "Email already taken" });
     }
@@ -41,27 +38,22 @@ export const registerHospital = async (req, res) => {
     const newHospital = await db.Hospital.create({
       name,
       email,
-      subdomain : sanitized,
+      subdomain: sanitized,
       phone,
       address,
       isActive: true
     });
 
-    
-    // adminUser.hospital_id = newHospital.id;
 
-    await db.UserHospital.create({
-      user_id: adminUser.user_id,
-      hospital_id: newHospital.id,
-      role: "admin"
-    });
-    
-    await adminUser.save();
+    userHospital.hospital_id = newHospital.id;
+    await userHospital.save();
 
     res.status(201).json({
       message: "Hospital registered successfully",
-      hospital: newHospital
+      hospital: newHospital,
+      role: { id: ownerRole.role_id, name: ownerRole.name }
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });

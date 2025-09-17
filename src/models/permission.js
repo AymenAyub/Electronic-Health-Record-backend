@@ -4,9 +4,9 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class Permission extends Model {
     static associate(models) {
-      // Many-to-many with Role
+      
       Permission.belongsToMany(models.Role, {
-        through: models.RolePermission,   // ✅ singular, same as rolepermission.js
+        through: models.RolePermission,  
         foreignKey: 'permission_id',
         otherKey: 'role_id',
         as: 'roles'
@@ -16,7 +16,7 @@ export default (sequelize, DataTypes) => {
 
   Permission.init(
     {
-      id: {                   // ✅ primary key
+      permission_id: {                 
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true

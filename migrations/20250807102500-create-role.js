@@ -10,7 +10,7 @@ export async function up(queryInterface, Sequelize) {
     },
     hospital_id: {
       type: Sequelize.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Hospitals',   
         key: 'id'

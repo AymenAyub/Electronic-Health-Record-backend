@@ -21,7 +21,7 @@ export async function up(queryInterface, Sequelize) {
     },
     hospital_id: {
       type: Sequelize.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'Hospitals',
         key: 'id',
@@ -29,10 +29,15 @@ export async function up(queryInterface, Sequelize) {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    role: {
-      type: Sequelize.ENUM('owner', 'admin', 'doctor', 'staff'),
+    role_id: {
+      type: Sequelize.INTEGER,
       allowNull: false,
-      defaultValue: 'staff',
+      references: {
+        model: 'Roles',
+        key: 'role_id',
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     createdAt: {
       allowNull: false,

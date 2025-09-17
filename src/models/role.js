@@ -8,14 +8,13 @@ export default (sequelize, DataTypes) => {
         foreignKey: 'hospital_id',
         as: 'hospital'
       });
+      
+      Role.hasMany(models.UserHospital, {
+      foreignKey: 'role_id',
+      as: 'userHospitals',
+    });
 
-      // Role can have many Users
-      Role.hasMany(models.User, {
-        foreignKey: 'role_id',
-        as: 'users'
-      });
 
-      // Role can have many Permissions (through RolePermissions)
       Role.belongsToMany(models.Permission, {
         through: models.RolePermission,
         foreignKey: 'role_id',
@@ -34,7 +33,11 @@ export default (sequelize, DataTypes) => {
       },
       hospital_id: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true,
+        references: {
+          model: 'Hospitals',
+          key: 'id',
+        }
       },
       name: {
         type: DataTypes.STRING,

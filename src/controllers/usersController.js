@@ -2,81 +2,44 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import db from "../models/index.js";
 
-export const adminSignup = async (req, res) => {
+export const ownerSignup = async (req, res) => {
   try {
-    const { name, email, password, contact} = req.body;
+    const { name, email, password, contact } = req.body;
 
     const existingUser = await db.User.findOne({ where: { email } });
-    if (existingUser)
+    if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
+    }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      const adminUser = await db.User.create({
+    const newUser = await db.User.create({
       name,
       email,
       password: hashedPassword,
       contact,
-      role: "admin",
+    });
+
+    const ownerRole = await db.Role.findOne({ where: { name: "Owner" } });
+    if (!ownerRole) {
+      return res.status(500).json({ message: "Owner role not found. Seed it first." });
+    }
+
+    await db.UserHospital.create({
+      user_id: newUser.user_id,
+      hospital_id: null,
+      role_id: ownerRole.role_id,
     });
 
     res.status(201).json({
-      message: "Admin registered successfully",
-      userId: adminUser.user_id,
+      message: "Owner registered successfully",
+      userId: newUser.user_id,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Signup failed", error: error.message });
   }
 };
-
-
-// export const login = async (req, res) => {
-//   try {
-//     const { email, password } = req.body;
-
-//     const user = await db.User.findOne({ where: { email } });
-//     if (!user) return res.status(404).json({ message: "User not found" });
-
-//     const isValid = await bcrypt.compare(password, user.password);
-//     if (!isValid) return res.status(401).json({ message: "Incorrect password" });
-
-//     const userHospitals = await db.UserHospital.findAll({
-//       where: { user_id: user.user_id },
-//       attributes: ["hospital_id", "role"],
-//       include: [
-//         {
-//           model: db.Hospital,
-//           as : 'hospital',
-//           attributes: ["id", "name", "subdomain", "email", "phone", "address"],
-//         },
-//       ],
-//       raw: false,
-//     });
-    
-//     const hospitals = userHospitals.map((uh) => ({
-//       hospital_id: uh.hospital_id,
-//       role: uh.role,
-//       hospital: uh.hospital ? uh.hospital.dataValues : null,
-//     }));
-
-//     const token = jwt.sign(
-//       { user_id: user.user_id, role: user.role, designation: user.designation },
-//       process.env.JWT_SECRET
-//     );
-
-//     const { password: _, ...userWithoutPassword } = user.dataValues;
-
-//     res.status(200).json({
-//       message: "Login successful",
-//       token,
-//       user: userWithoutPassword,
-//       hospitals,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: error.message });
-//   }
-// };
 
 export const login = async (req, res) => {
   try {
@@ -90,50 +53,150 @@ export const login = async (req, res) => {
 
     const userHospitals = await db.UserHospital.findAll({
       where: { user_id: user.user_id },
-      attributes: ["hospital_id", "role"],
+      attributes: ["hospital_id"],
       include: [
         {
           model: db.Hospital,
           as: "hospital",
           attributes: ["id", "name", "subdomain", "email", "phone", "address"],
         },
+        {
+          model: db.Role,
+          as: "role",
+          attributes: ["role_id", "name"], 
+        },
       ],
-      raw: false,
     });
 
-    const hospitals = userHospitals.map((uh) => ({
+      const hospitals = userHospitals
+    .filter((uh) => uh.hospital_id !== null)   
+    .map((uh) => ({
       hospital_id: uh.hospital_id,
-      role: uh.role,
+      role: uh.role ? { id: uh.role.role_id, name: uh.role.name } : null,
       hospital: uh.hospital ? uh.hospital.dataValues : null,
     }));
+
 
     const defaultHospitalId = hospitals.length > 0 ? hospitals[0].hospital_id : null;
 
     const token = jwt.sign(
-      { 
-        user_id: user.user_id, 
-        role: user.role, 
-        designation: user.designation 
-      },
+      { user_id: user.user_id, email: user.email ,  hospital_id: defaultHospitalId },
       process.env.JWT_SECRET
     );
 
     const { password: _, ...userWithoutPassword } = user.dataValues;
 
-    res.status(200).json({
+    const defaultRole = userHospitals.find((uh) => uh.hospital_id === null)?.role || null;
+
+    res.json({
       message: "Login successful",
       token,
       user: userWithoutPassword,
       hospitals,
       defaultHospitalId,
+      defaultRole            
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
+}; 
+
+export const getAllUsers = async (req, res) => {
+  try {
+    const { hospitalId } = req.query;
+
+    const users = await db.UserHospital.findAll({
+      where: { hospital_id: hospitalId },
+      include: [
+        {
+          model: db.User,
+          as: "user",
+          attributes: ["user_id", "name", "email" , "contact"],
+        },
+        {
+          model: db.Role,
+          as: "role",
+          attributes: ["role_id", "name"],
+        },
+      ],
+    });
+
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({
+      message: "Error fetching users",
+      error: err.message,
+    });
+  }
 };
 
+export const addUser = async (req, res) => {
+  const t = await db.sequelize.transaction();
+  try {
+    const { hospitalId } = req.query;
+    const { name, email, password, contact, roleId, specialty, bio, designation } = req.body;
 
+    if (!hospitalId) {
+      return res.status(400).json({ message: "Hospital ID is required" });
+    }
+    if (!name || !email || !password || !roleId) {
+      return res.status(400).json({ message: "Name, email, password, and role are required" });
+    }
+
+    const role = await db.Role.findOne({ where: { role_id: roleId, hospital_id: hospitalId } });
+    if (!role) {
+      return res.status(400).json({ message: "Invalid role for this hospital" });
+    }
+
+    const existingUser = await db.User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ field: "email", message: "Email already registered" });
+    }
+
+    if (role.name === "Doctor" && !specialty) {
+      return res.status(400).json({ field: "specialty", message: "Specialty is required for doctors" });
+    }
+    if (role.name === "Staff" && !designation) {
+      return res.status(400).json({ field: "designation", message: "Designation is required for staff" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await db.User.create({
+      name,
+      email,
+      password: hashedPassword,
+      contact,
+      specialty: specialty || null,
+      bio: bio || null,
+      designation: designation || null,
+    }, { transaction: t });
+
+    await db.UserHospital.create({
+      user_id: user.user_id,
+      hospital_id: hospitalId,
+      role_id: roleId,
+    }, { transaction: t });
+
+    await t.commit();
+    const { password: _, ...safeUser } = user.get({ plain: true });
+
+    res.status(201).json({
+      message: "User created successfully",
+      user: safeUser,
+    });
+
+  } catch (err) {
+    await t.rollback();
+    console.error(err);
+    res.status(500).json({
+      message: "Error creating user",
+      error: err.message,
+    });
+  }
+};
 
 export const addDoctor = async (req, res) => {
   try {

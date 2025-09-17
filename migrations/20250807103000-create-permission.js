@@ -2,7 +2,7 @@
 
 export async function up(queryInterface, Sequelize) {
   await queryInterface.createTable('Permissions', {
-    id: {
+    permission_id: {
       type: Sequelize.INTEGER,
       primaryKey: true,
       autoIncrement: true,

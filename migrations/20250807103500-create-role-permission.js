@@ -23,7 +23,7 @@ export async function up(queryInterface, Sequelize) {
       allowNull: false,
       references: {
         model: 'Permissions',
-        key: 'id',
+        key: 'permission_id',
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',

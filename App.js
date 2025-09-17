@@ -9,7 +9,9 @@ import patientRoutes from "./src/routes/patientRoutes.js";
 import appointmentRoutes from "./src/routes/appointmentRoutes.js";
 import doctorAvailabilityRoutes from "./src/routes/doctorAvailabilityRoutes.js";
 import doctorRoutes from "./src/routes/doctorRoutes.js";
-import medicalHistoryRoutes from "./src/routes/medicalHistoryRoutes.js";
+// import medicalHistoryRoutes from "./src/routes/medicalHistoryRoutes.js";
+import roleRoutes from "./src/routes/roleRoutes.js";
+import permissionRoutes from "./src/routes/permissionRoutes.js";
 dotenv.config();
 
 const app = express();
@@ -29,7 +31,11 @@ app.use("/api",patientRoutes);
 app.use("/api", appointmentRoutes);
 app.use("/api", doctorAvailabilityRoutes);
 app.use("/api", doctorRoutes);
-app.use("/api", medicalHistoryRoutes);
+// app.use("/api", medicalHistoryRoutes);
+app.use("/api", roleRoutes);
+app.use("/api", permissionRoutes);
+
+
 db.sequelize.sync({ alter: true })
   .then(() => {
     console.log(" MySQL connected & tables synced");

@@ -4,7 +4,6 @@ import { Model } from 'sequelize';
 export default (sequelize, DataTypes) => {
   class UserHospital extends Model {
     static associate(models) {
-
       UserHospital.belongsTo(models.User, {
         foreignKey: 'user_id',
         as: 'user',
@@ -13,6 +12,11 @@ export default (sequelize, DataTypes) => {
       UserHospital.belongsTo(models.Hospital, {
         foreignKey: 'hospital_id',
         as: 'hospital',
+      });
+
+      UserHospital.belongsTo(models.Role, {
+        foreignKey: 'role_id',
+        as: 'role',
       });
     }
   }
@@ -30,12 +34,11 @@ export default (sequelize, DataTypes) => {
       },
       hospital_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
       },
-      role: {
-        type: DataTypes.ENUM( 'admin', 'doctor', 'staff'),
+      role_id: {
+        type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: 'admin',
       },
     },
     {

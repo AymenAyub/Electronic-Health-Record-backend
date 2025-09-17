@@ -1,5 +1,5 @@
 
-export const isAdmin = (req, res, next) => {
+export const isOwner = (req, res, next) => {
     try {
       const user = req.user;
   
@@ -7,14 +7,14 @@ export const isAdmin = (req, res, next) => {
         return res.status(401).json({ message: "Unauthorized. No user found." });
       }
   
-      if (user.role !== "admin") {
-        return res.status(403).json({ message: "Access denied. Admins only." });
+      if (user.role !== "Owner") {
+        return res.status(403).json({ message: "Access denied. Owners only." });
       }
   
       next();
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Server error in isAdmin middleware" });
+      res.status(500).json({ message: "Server error in isOwner middleware" });
     }
   };
   

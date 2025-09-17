@@ -10,16 +10,6 @@ export async function up(queryInterface, Sequelize) {
         primaryKey: true,
         allowNull: false,
       },
-      // hospital_id: {
-      //   type: Sequelize.INTEGER,
-      //   allowNull: true,
-      //   references: {
-      //     model: 'Hospitals', // exact table name
-      //     key: 'id',
-      //   },
-      //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE',
-      // },
       // role_id: {
       //   type: Sequelize.INTEGER,
       //   allowNull: false,
@@ -28,7 +18,7 @@ export async function up(queryInterface, Sequelize) {
       //     key: 'role_id',
       //   },
       //   onUpdate: 'CASCADE',
-      //   onDelete: 'CASCADE', 
+      //   onDelete: 'SET NULL', 
       // },      
       name: {
         type: Sequelize.STRING,
@@ -43,25 +33,21 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      role: {
-        type: Sequelize.ENUM('admin', 'doctor', 'staff'),
-        allowNull: false,
-      },
       designation: {
         type: Sequelize.STRING,
         allowNull: true, 
       },
       specialty: {
         type: Sequelize.STRING,
-        allowNull: true, // only for doctors
+        allowNull: true,
       },
       bio: {
         type: Sequelize.TEXT,
-        allowNull: true, // only for doctors
+        allowNull: true, 
       },
       contact: {
         type: Sequelize.STRING,
-        allowNull: true, // only for doctors
+        allowNull: true,
       },      
       createdAt: {
         allowNull: false,
