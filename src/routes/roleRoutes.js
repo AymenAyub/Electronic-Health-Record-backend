@@ -5,7 +5,7 @@ import { authorizePermission } from "../middlewares/rbac.js";
 
 const router = express.Router();
 
-router.post("/addRole", authenticateUser , createRole);
+router.post("/addRole", authenticateUser ,  createRole);
 router.get("/roles", authenticateUser , getRoles);
 router.put("/updateRole/:roleId", authenticateUser , updateRole);
 

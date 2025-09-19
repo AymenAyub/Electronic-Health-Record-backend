@@ -11,6 +11,10 @@ export async function up(queryInterface, Sequelize) {
       where: { role_id: roleMap['Owner'], permission_id: p.permission_id }
     }, ['id']);
 
+    console.log("Roles found:", roles);
+console.log("Role Map:", roleMap);
+console.log("Owner Role ID:", roleMap['Owner']);
+
     if (!existingRP) {
       rolePermissions.push({
         role_id: roleMap['Owner'],

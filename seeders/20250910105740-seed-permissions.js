@@ -2,7 +2,7 @@
 
 export async function up(queryInterface, Sequelize) {
   const permissions = [
-  { name: 'add_hospital', description: 'Can add a new hospital' },
+    { name: 'add_hospital', description: 'Can add a new hospital' },
     { name: 'add_user', description: 'Can add new users' },
     { name: 'edit_user', description: 'Can edit existing users' },
     { name: 'delete_user', description: 'Can delete users' },
@@ -21,6 +21,11 @@ export async function up(queryInterface, Sequelize) {
     { name: 'edit_medical_history', description: 'Can edit medical history' },
     { name: 'delete_medical_history', description: 'Can delete medical history' },
     { name: 'view_medical_history', description: 'Can view patient medical history' },
+    { name: 'add_role', description: 'Can add new roles' },
+    { name: 'edit_role', description: 'Can edit roles' },
+    { name: 'view_roles', description: 'Can view roles' },
+    { name: 'delete_role', description: 'Can delete roles' },
+
   ]
 
   const insertData = [];

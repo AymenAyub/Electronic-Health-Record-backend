@@ -7,13 +7,14 @@ const router = express.Router();
 
 router.post("/signup", ownerSignup);
 router.post("/login",login);
-router.get("/users",authenticateUser,getAllUsers);
+router.get("/users", authenticateUser,authorizePermission('view_users'), getAllUsers);
 router.post("/addUser",authenticateUser, authorizePermission('add_user'), addUser);
+router.put("/updateUser/:id",authenticateUser, authorizePermission('edit_user'), updateUser);
+router.delete("/deleteUser/:id", authenticateUser, authorizePermission('delete_user'), deleteUser);
 router.post("/admin/addDoctor",authenticateUser, addDoctor);
 router.get("/admin/getDoctors",authenticateUser,getDoctors);
 router.post("/admin/addStaff",authenticateUser,addStaff);
 router.get("/admin/getStaff",authenticateUser, getStaff);
-router.put("/admin/updateUser/:id",authenticateUser, updateUser);
-router.delete("/admin/deleteUser/:id", authenticateUser,deleteUser);
+
 const userRoutes=router;
 export default userRoutes;

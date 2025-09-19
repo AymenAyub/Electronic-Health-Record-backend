@@ -364,101 +364,154 @@ export const getDoctors = async (req, res) => {
     }
   };
 
-
 export const updateUser = async (req, res) => {
   try {
-    const adminUser = req.user;
-    const { hospital_id } = req.body; 
+    const loginUser = req.user;
+    const { hospital_id } = req.query;
+    const { id } = req.params; 
 
-    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
-    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
-
-    const adminHospitalRecord = await db.UserHospital.findOne({
-      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
-    });
-
-    if (!adminHospitalRecord) {
-      return res.status(403).json({ message: "You are not authorized to update users in this hospital." });
+    if (!loginUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!hospital_id) {
+      return res.status(400).json({ message: "hospital_id is required" });
     }
 
-    const { id } = req.params;
-    const { name, email, password, specialty, contact, bio, designation } = req.body;
+    const loginUserRecord = await db.UserHospital.findOne({
+      where: { user_id: loginUser.user_id, hospital_id },
+      include: [{ model: db.Role, as: "role", attributes: ["name"] }],
+    });
+
+    if (!loginUserRecord) {
+      return res.status(403).json({
+        message: "You are not authorized to update users in this hospital.",
+      });
+    }
 
     const targetRecord = await db.UserHospital.findOne({
-      where: { user_id: id, hospital_id, role: ["doctor", "staff"] },
-      include: { model: db.User,
-       as : 'user'
-       },
+      where: { user_id: id, hospital_id },
+      include: [
+        {
+          model: db.User,
+          as: "user",
+        },
+        {
+          model: db.Role,
+          as: "role",
+          attributes: ["name"],
+        },
+      ],
     });
 
     if (!targetRecord) {
-      return res.status(404).json({ message: "User not found in this hospital" });
+      return res
+        .status(404)
+        .json({ message: "User not found in this hospital" });
     }
 
     const user = targetRecord.user;
 
-    if (email && email !== user.email) {
-      const existing = await db.User.findOne({ where: { email } });
-      if (existing) return res.status(400).json({ message: "Email already in use" });
+    if (req.body.email && req.body.email !== user.email) {
+      const existing = await db.User.findOne({
+        where: { email: req.body.email },
+      });
+      if (existing) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
     }
 
     let updatedPassword = user.password;
-    if (password) updatedPassword = await bcrypt.hash(password, 10);
+    if (req.body.password) {
+      updatedPassword = await bcrypt.hash(req.body.password, 10);
+    }
 
     await user.update({
-      name: name || user.name,
-      email: email || user.email,
+      name: req.body.name || user.name,
+      email: req.body.email || user.email,
       password: updatedPassword,
-      contact: contact || user.contact,
-      specialty: user.role === "doctor" ? specialty || user.specialty : null,
-      bio: user.role === "doctor" ? bio || user.bio : null,
-      designation: user.role === "staff" ? designation || user.designation : null,
+      contact: req.body.contact || user.contact,
     });
 
-    const { password: _, ...userWithoutPassword } = user.dataValues;
-    res.json({ message: "User updated successfully", user: userWithoutPassword });
+    if (targetRecord.role.name === "Doctor") {
+      await targetRecord.update({
+        specialty: req.body.specialty || targetRecord.specialty,
+        bio: req.body.bio || targetRecord.bio,
+      });
+    } else if (targetRecord.role.name === "Staff") {
+      await targetRecord.update({
+        designation: req.body.designation || targetRecord.designation,
+      });
+    }
+
+    const { password, ...userWithoutPassword } = user.dataValues;
+    res.json({
+      message: "User updated successfully",
+      user: {
+        ...userWithoutPassword,
+        role: targetRecord.role,
+        hospitalData: {
+          specialty: targetRecord.specialty,
+          bio: targetRecord.bio,
+          designation: targetRecord.designation,
+        },
+      },
+    });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error updating user:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
 export const deleteUser = async (req, res) => {
   try {
-    const adminUser = req.user;
+    const loginUser = req.user;
     const hospital_id = req.query.hospital_id;
 
-    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
-    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+    if (!loginUser) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!hospital_id) {
+      return res
+        .status(400)
+        .json({ message: "hospital_id is required" });
+    }
 
-    const adminHospitalRecord = await db.UserHospital.findOne({
-      where: { user_id: adminUser.user_id, hospital_id, role: "admin" },
+    const userHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: loginUser.user_id, hospital_id },
+      include: [{ model: db.Role, as: "role", attributes: ["name"] }],
     });
 
-    if (!adminHospitalRecord) {
-      return res.status(403).json({ message: "You are not authorized to delete users in this hospital." });
+    if (!userHospitalRecord) {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to delete users in this hospital." });
     }
 
     const { id } = req.params;
 
     const targetRecord = await db.UserHospital.findOne({
-      where: { user_id: id, hospital_id, role: ["doctor", "staff"] },
-      include: { model: db.User,
-        as: 'user'
-       },
+      where: { user_id: id, hospital_id },
+      include: [
+        { model: db.User, as: "user" },
+        { model: db.Role, as: "role", attributes: ["name"] },
+      ],
     });
 
     if (!targetRecord) {
-      return res.status(404).json({ message: "User not found in this hospital" });
+      return res
+        .status(404)
+        .json({ message: "User not found in this hospital" });
     }
 
-    const user = targetRecord.user;
+    await targetRecord.destroy();
 
-    await user.destroy();
+    if (targetRecord.user) {
+      await targetRecord.user.destroy();
+    }
 
-    res.json({ message: "User deleted successfully" });
+    res.json({ message: "User removed from hospital successfully" });
   } catch (err) {
     console.error("Delete user error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
