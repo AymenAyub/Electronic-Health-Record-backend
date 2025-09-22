@@ -3,21 +3,12 @@ import { Op } from "sequelize";
 
 export const addPatient = async (req, res) => {
   try {
-    const user = req.user; 
-    const { hospital_id, name, age, gender, contact, CNIC, guardian_info, address, emergency_contact } = req.body;
+    const user = req.user;
+     const hospital_id = req.query.hospitalId;
+    const {name, age, gender, contact, CNIC, guardian_info, address, emergency_contact } = req.body;
 
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
     if (!name || !contact) return res.status(400).json({ message: "Name and contact are required" });
-
-
-    const userRecord = await db.UserHospital.findOne({
-      where: { user_id: user.user_id, hospital_id, role: "staff" },
-    });
-
-    if (!userRecord) {
-      return res.status(403).json({ message: "You are not authorized to add patients to this hospital." });
-    }
 
     if (CNIC) {
       const existingPatient = await db.Patient.findOne({
@@ -52,7 +43,7 @@ export const addPatient = async (req, res) => {
 export const getPatients = async (req, res) => {
   try {
     const user = req.user;
-    const hospital_id = req.query.hospital_id;
+   const hospital_id = req.query.hospitalId;
 
     if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
@@ -61,7 +52,6 @@ export const getPatients = async (req, res) => {
         where: {
           user_id: user.user_id,
           hospital_id,
-          role: { [Op.in]: ["admin", "staff" , "doctor"] },
         },
       });
     if (!userRecord) {
@@ -83,19 +73,11 @@ export const getPatients = async (req, res) => {
 export const updatePatient = async (req, res) => {
   try {
     const user = req.user;
-    const { hospital_id } = req.body;
+    const hospital_id = req.query.hospitalId;
     const { patient_id } = req.params;
 
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!hospital_id || !patient_id)
       return res.status(400).json({ message: "hospital_id and patient_id are required" });
-
-    const staffRecord = await db.UserHospital.findOne({
-      where: { user_id: user.user_id, hospital_id, role: "staff" },
-    });
-
-    if (!staffRecord)
-      return res.status(403).json({ message: "You are not authorized to update patients in this hospital." });
 
     const patient = await db.Patient.findOne({ where: { patient_id, hospital_id } });
     if (!patient) return res.status(404).json({ message: "Patient not found in this hospital" });
@@ -112,19 +94,11 @@ export const updatePatient = async (req, res) => {
 export const deletePatient = async (req, res) => {
   try {
     const user = req.user;
-    const hospital_id = req.query.hospital_id;
+    const hospital_id = req.query.hospitalId;
     const { patient_id } = req.params;
 
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!hospital_id || !patient_id)
       return res.status(400).json({ message: "hospital_id and patient_id are required" });
-
-    const staffRecord = await db.UserHospital.findOne({
-      where: { user_id: user.user_id, hospital_id, role: "staff" },
-    });
-
-    if (!staffRecord)
-      return res.status(403).json({ message: "You are not authorized to delete patients in this hospital." });
 
     const patient = await db.Patient.findOne({ where: { patient_id, hospital_id } });
     if (!patient) return res.status(404).json({ message: "Patient not found in this hospital" });

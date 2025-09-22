@@ -45,8 +45,13 @@ export const registerHospital = async (req, res) => {
     });
 
 
-    userHospital.hospital_id = newHospital.id;
-    await userHospital.save();
+          
+    await db.UserHospital.create({
+        user_id: user.user_id,
+        hospital_id: newHospital.id,
+        role_id: ownerRole.role_id
+      });
+
 
     res.status(201).json({
       message: "Hospital registered successfully",

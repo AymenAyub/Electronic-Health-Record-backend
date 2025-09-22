@@ -26,7 +26,7 @@ app.use(cors({
 
 app.use("/api", userRoutes);
 app.use("/api/hospital", hospitalRoutes);
-app.use("/api",dashboardRoutes)
+// app.use("/api",dashboardRoutes)
 app.use("/api",patientRoutes);
 app.use("/api", appointmentRoutes);
 app.use("/api", doctorAvailabilityRoutes);

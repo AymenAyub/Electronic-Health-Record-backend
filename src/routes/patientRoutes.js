@@ -1,7 +1,6 @@
 import express from "express";
-import { addPatient, deletePatient, getPatients, updatePatient } from "../controllers/patientController.js";
+import { addPatient , getPatients, updatePatient, deletePatient } from "../controllers/patientController.js";
 import { authenticateUser } from "../middlewares/authMiddleware.js";
-
 const router = express.Router();
 
 router.post("/patients/addPatient", authenticateUser, addPatient);

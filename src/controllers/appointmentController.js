@@ -100,7 +100,7 @@ export const scheduleAppointment = async (req, res) => {
 export const getAppointments = async (req, res) => {
   try {
     const user = req.user;
-    const hospital_id = Number(req.query.hospital_id);
+    const hospital_id = Number(req.query.hospitalId);
     console.log("Query params:", req.query);
 
     if (!hospital_id) {

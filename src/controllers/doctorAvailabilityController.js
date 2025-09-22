@@ -6,7 +6,8 @@ import { parseISO, isValid } from "date-fns";
 export const addAvailability = async (req, res) => {
   try {
     const doctorId = req.user.user_id;
-    const { hospital_id, day_of_week, start_time, end_time, slot_duration } = req.body;
+    const hospital_id=req.query.hospitalId;
+    const { day_of_week, start_time, end_time, slot_duration } = req.body;
 
     if (!hospital_id || day_of_week === undefined || !start_time || !end_time) {
       return res.status(400).json({
@@ -14,12 +15,8 @@ export const addAvailability = async (req, res) => {
       });
     }
 
-    if (req.user.role !== "doctor") {
-      return res.status(403).json({ message: "Only doctors can add availability" });
-    }
-
     const existing = await db.DoctorAvailability.findOne({
-      where: { doctor_id: doctorId, day_of_week },
+      where: { doctor_id: doctorId, day_of_week, hospital_id },
     });
 
     
@@ -27,7 +24,7 @@ export const addAvailability = async (req, res) => {
       existing.start_time = start_time;
       existing.end_time = end_time;
       existing.slot_duration = slot_duration;
-      existing.hospital_id = hospital_id; // optional
+      existing.hospital_id = hospital_id; 
       await existing.save();
 
       return res.status(200).json({
@@ -81,47 +78,14 @@ export const getMyAvailability = async (req, res) => {
   }
 };
 
-  
-
-export const updateAvailability = async (req, res) => {
-  try {
-    const doctorId = req.user.user_id; 
-    const { availabilityId } = req.params;
-    const { day_of_week, start_time, end_time, slot_duration, hospital_id } = req.body;
-
-    if (req.user.role !== "doctor") {
-      return res.status(403).json({ message: "Only doctors can update availability" });
-    }
-
-    const availability = await db.DoctorAvailability.findOne({
-      where: { availability_id: availabilityId, doctor_id: doctorId },
-    });
-
-    if (!availability) {
-      return res.status(404).json({ message: "Availability not found or not owned by this doctor" });
-    }
-
-    availability.day_of_week = day_of_week || availability.day_of_week;
-    availability.start_time = start_time || availability.start_time;
-    availability.end_time = end_time || availability.end_time;
-    availability.slot_duration = slot_duration || availability.slot_duration;
-
-    await availability.save();
-
-    res.status(200).json({ message: "Availability updated successfully", availability });
-  } catch (error) {
-    console.error("Error updating availability:", error);
-    res.status(500).json({ message: "Error updating availability", error: error.message });
-  }
-};
 export const deleteAvailability = async (req, res) => {
   try {
     const doctorId = req.user.user_id; 
     const { availabilityId } = req.params;
 
-    if (req.user.role !== "doctor") {
-      return res.status(403).json({ message: "Only doctors can delete availability" });
-    }
+    // if (req.user.role !== "doctor") {
+    //   return res.status(403).json({ message: "Only doctors can delete availability" });
+    // }
 
     const availability = await db.DoctorAvailability.findOne({
       where: { availability_id: availabilityId, doctor_id: doctorId },
@@ -143,7 +107,7 @@ export const deleteAvailability = async (req, res) => {
 export const getDoctorAvailableSlots = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    const { date } = req.query; // YYYY-MM-DD format
+    const { date } = req.query; 
 
     if (!date) {
       return res.status(400).json({ message: "Date is required in query param" });
@@ -151,7 +115,7 @@ export const getDoctorAvailableSlots = async (req, res) => {
 
     const targetDate = parseISO(date);
 
-    const dayOfWeek = targetDate.getDay(); // 0 = Sunday
+    const dayOfWeek = targetDate.getDay(); 
 
     const availability = await db.DoctorAvailability.findOne({
       where: {
@@ -164,11 +128,10 @@ export const getDoctorAvailableSlots = async (req, res) => {
       return res.status(200).json({ slots: [], message: "Doctor not available on this day" });
     }
 
-    const slotDuration = availability.slot_duration || 30; // default 30 min
-    const startTime = availability.start_time; // "HH:MM:SS"
-    const endTime = availability.end_time;     // "HH:MM:SS"
+    const slotDuration = availability.slot_duration || 30; 
+    const startTime = availability.start_time; 
+    const endTime = availability.end_time;   
 
-    // 2️⃣ Fetch booked appointments for that day
     const bookedAppointments = await db.Appointment.findAll({
       where: {
         doctor_id: doctorId,
@@ -178,9 +141,8 @@ export const getDoctorAvailableSlots = async (req, res) => {
       attributes: ["start_time"],
     });
 
-    const bookedTimes = bookedAppointments.map(a => a.start_time); // ["HH:MM:SS", ...]
+    const bookedTimes = bookedAppointments.map(a => a.start_time); 
 
-    // 3️⃣ Generate all available slots
     let slots = [];
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     const [endHours, endMinutes] = endTime.split(":").map(Number);

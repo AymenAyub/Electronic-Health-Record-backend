@@ -132,6 +132,48 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+export const getDoctors = async (req, res) => {
+  try {
+    const user = req.user;
+    const hospital_id = req.query.hospitalId;
+
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
+
+    const userHospitalRecord = await db.UserHospital.findOne({
+      where: { user_id: user.user_id, hospital_id},
+    });
+
+    if (!userHospitalRecord) {
+      return res.status(403).json({ message: "You are not authorized to access this hospital." });
+    }
+
+    const doctorRecords = await db.UserHospital.findAll({
+      where: { hospital_id },
+      include: [
+        {
+          model: db.Role,
+          as: "role",
+        },
+        {
+          model: db.User,
+          as: "user",
+          attributes: { exclude: ["password"] },
+        },
+      ],
+    });
+
+  const doctors = doctorRecords
+        .filter(uh => uh.role?.name.toLowerCase() === "doctor")
+        .map(uh => uh.user);
+
+    res.json({ doctors });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const addUser = async (req, res) => {
   const t = await db.sequelize.transaction();
   try {
@@ -195,89 +237,6 @@ export const addUser = async (req, res) => {
       message: "Error creating user",
       error: err.message,
     });
-  }
-};
-
-export const addDoctor = async (req, res) => {
-  try {
-    const adminUser = req.user;
-    const { name, email, password, specialty, contact, bio, hospital_id } = req.body;
-
-    if (!name || !email || !password || !hospital_id) {
-      return res.status(400).json({ message: "Missing Information." });
-    }
-
-    const adminHospitalRecord = await db.UserHospital.findOne({
-      where: { user_id: adminUser.user_id, hospital_id, role: "admin" }
-    });
-
-    if (!adminHospitalRecord) {
-      return res.status(403).json({ message: "You are not authorized to manage this hospital." });
-    }
-
-    const existingUser = await db.User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered." });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const doctor = await db.User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: "doctor",
-      specialty,
-      contact,
-      bio,
-    });
-
-    await db.UserHospital.create({
-      user_id: doctor.user_id,
-      hospital_id,
-      role: "doctor"
-    });
-
-    res.status(201).json({ message: "Doctor added successfully.", doctor });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error." });
-  }
-};
-
-
-export const getDoctors = async (req, res) => {
-  try {
-    const adminUser = req.user;
-    const hospital_id = req.query.hospital_id;
-
-    if (!adminUser) return res.status(401).json({ message: "Unauthorized" });
-    if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });
-
-    const adminHospitalRecord = await db.UserHospital.findOne({
-      where: { user_id: adminUser.user_id, hospital_id},
-    });
-
-    if (!adminHospitalRecord) {
-      return res.status(403).json({ message: "You are not authorized to access this hospital." });
-    }
-
-    const userHospitalRecords = await db.UserHospital.findAll({
-      where: { hospital_id, role: "doctor" },
-      include: {
-        model: db.User,
-        as : 'user',
-        attributes: { exclude: ["password"] },
-      },
-    });
-
-    const doctors = userHospitalRecords.map(uh => uh.user);
-    res.json({ doctors });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -367,7 +326,7 @@ export const getDoctors = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const loginUser = req.user;
-    const { hospital_id } = req.query;
+    const hospital_id  = req.query.hospitalId;
     const { id } = req.params; 
 
     if (!loginUser) {
@@ -430,12 +389,12 @@ export const updateUser = async (req, res) => {
       email: req.body.email || user.email,
       password: updatedPassword,
       contact: req.body.contact || user.contact,
+      bio: req.body.bio || user.bio
     });
 
     if (targetRecord.role.name === "Doctor") {
       await targetRecord.update({
         specialty: req.body.specialty || targetRecord.specialty,
-        bio: req.body.bio || targetRecord.bio,
       });
     } else if (targetRecord.role.name === "Staff") {
       await targetRecord.update({
@@ -451,7 +410,6 @@ export const updateUser = async (req, res) => {
         role: targetRecord.role,
         hospitalData: {
           specialty: targetRecord.specialty,
-          bio: targetRecord.bio,
           designation: targetRecord.designation,
         },
       },
