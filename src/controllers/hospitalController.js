@@ -44,14 +44,20 @@ export const registerHospital = async (req, res) => {
       isActive: true
     });
 
+let existingUserHospital = await db.UserHospital.findOne({
+  where: { user_id: user.user_id, hospital_id: null, role_id: ownerRole.role_id }
+});
 
-          
-    await db.UserHospital.create({
-        user_id: user.user_id,
-        hospital_id: newHospital.id,
-        role_id: ownerRole.role_id
-      });
-
+if (existingUserHospital) {
+  userHospital.hospital_id = newHospital.id;
+  await userHospital.save();
+} else {
+  await db.UserHospital.create({
+    user_id: user.user_id,
+    hospital_id: newHospital.id,
+    role_id: ownerRole.role_id
+  });
+}
 
     res.status(201).json({
       message: "Hospital registered successfully",

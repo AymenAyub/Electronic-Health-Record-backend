@@ -294,3 +294,47 @@ export const getDoctorAppointments = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+export const getAppointmentsOfWeek = async (req, res) => {
+  try {
+    const hospital_id = Number(req.query.hospitalId);
+    if (!hospital_id) return res.status(400).json({ message: "hospitalId is required" });
+
+    const today = new Date();
+    const firstDay = new Date(today.setDate(today.getDate() - today.getDay())); 
+    firstDay.setHours(0, 0, 0, 0);
+    const lastDay = new Date(firstDay);
+    lastDay.setDate(firstDay.getDate() + 6);
+    lastDay.setHours(23, 59, 59, 999);
+
+    const appointments = await Appointment.findAll({
+      where: {
+        hospital_id,
+        appointment_date: {
+          [Op.between]: [firstDay.toISOString().split("T")[0], lastDay.toISOString().split("T")[0]],
+        },
+        status: { [Op.ne]: "Cancelled" }, 
+      },
+    });
+
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const chartDataMap = {
+      Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0
+    };
+
+    appointments.forEach(a => {
+      const dayName = days[new Date(a.appointment_date).getDay()];
+      chartDataMap[dayName]++;
+    });
+
+    const chartData = Object.keys(chartDataMap).map(day => ({
+      name: day,
+      Appointments: chartDataMap[day]
+    }));
+
+    res.status(200).json({ chartData });
+  } catch (error) {
+    console.error("Error fetching weekly appointments:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

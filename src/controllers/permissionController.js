@@ -4,6 +4,9 @@ const { Permission } = db;
 
 export const getPermissions = async (req, res) => {
   try {
+    const hospital_id=req.query.hospitalId;
+    console.log('hospital id ', hospital_id);
+    
     const permissions = await Permission.findAll({
       attributes: ["permission_id", "name", "description"],
     });
