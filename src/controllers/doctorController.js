@@ -89,7 +89,7 @@ export const addDoctor = async (req, res) => {
 export const getDoctors = async (req, res) => {
   try {
     const user = req.user;
-    const hospital_id = req.query.hospital_id;
+    const hospital_id = req.query.hospitalId;
 
     if (!user) return res.status(401).json({ message: "Unauthorized" });
     if (!hospital_id) return res.status(400).json({ message: "hospital_id is required" });

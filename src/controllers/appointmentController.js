@@ -9,7 +9,8 @@ const User = db.User;
 export const scheduleAppointment = async (req, res) => {
   try {
     const user=req.user;
-    const { hospital_id, patient_id, doctor_id, appointment_date, start_time } = req.body;
+    const hospital_id=req.query.hospitalId;
+    const {patient_id, doctor_id, appointment_date, start_time } = req.body;
 
     const patient = await Patient.findByPk(patient_id);
     if (!patient) return res.status(404).json({ message: "Patient not found" });

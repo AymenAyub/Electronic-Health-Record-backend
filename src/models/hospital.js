@@ -40,7 +40,6 @@ export default (sequelize, DataTypes) => {
       },
       name: { type: DataTypes.STRING, allowNull: false },
       email: { type: DataTypes.STRING, allowNull: false, unique: true },
-      subdomain: { type: DataTypes.STRING, allowNull: false, unique: true }, // <- clarity
       phone: { type: DataTypes.STRING, allowNull: true },
       address: { type: DataTypes.TEXT, allowNull: true },
       isActive: { type: DataTypes.BOOLEAN, defaultValue: true },

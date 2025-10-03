@@ -23,18 +23,16 @@ app.use(cors({
   origin: "http://localhost:3000", 
   credentials: true
 }));
+app.use("/api/hospital", hospitalRoutes);
+app.use("/api", doctorRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", userRoutes);
-app.use("/api/hospital", hospitalRoutes);
 app.use("/api", permissionRoutes);
 app.use("/api", roleRoutes);
 app.use("/api",patientRoutes);
 app.use("/api", appointmentRoutes);
 app.use("/api", doctorAvailabilityRoutes);
-app.use("/api", doctorRoutes);
 app.use("/api", medicalHistoryRoutes);
-
-
 
 db.sequelize.sync({ alter: true })
   .then(() => {

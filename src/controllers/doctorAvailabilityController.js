@@ -2,24 +2,39 @@ import db from "../models/index.js";
 import { Op } from "sequelize";
 import { parseISO, isValid } from "date-fns";
 
+const getUserRole = async (userId, hospitalId) => {
+  const userHospital = await db.UserHospital.findOne({
+    where: { user_id: userId, hospital_id: hospitalId },
+    include: [{ model: db.Role, as: "role" }]
+  });
+  return userHospital?.role?.name;
+};
 
 export const addAvailability = async (req, res) => {
   try {
-    const doctorId = req.user.user_id;
-    const hospital_id=req.query.hospitalId;
-    const { day_of_week, start_time, end_time, slot_duration } = req.body;
+    const hospital_id = req.query.hospitalId;
+    const { day_of_week, start_time, end_time, slot_duration, doctorId } = req.body;
 
     if (!hospital_id || day_of_week === undefined || !start_time || !end_time) {
-      return res.status(400).json({
-        message: "All fields are required.",
-      });
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    const roleName = await getUserRole(req.user.user_id, hospital_id);
+
+    let targetDoctorId;
+
+    if (roleName === "Doctor") {
+      targetDoctorId = req.user.user_id;
+    } else if ((roleName === "Owner" || roleName === "Admin") && doctorId) {
+      targetDoctorId = doctorId;
+    } else {
+      return res.status(403).json({ message: "Permission denied or Doctor ID missing." });
     }
 
     const existing = await db.DoctorAvailability.findOne({
-      where: { doctor_id: doctorId, day_of_week, hospital_id },
+      where: { doctor_id: targetDoctorId, day_of_week, hospital_id },
     });
 
-    
     if (existing) {
       existing.start_time = start_time;
       existing.end_time = end_time;
@@ -29,12 +44,12 @@ export const addAvailability = async (req, res) => {
 
       return res.status(200).json({
         message: "Availability updated successfully",
-        availability: existing,
+        availability: existing
       });
     }
 
     const newAvailability = await db.DoctorAvailability.create({
-      doctor_id: doctorId,
+      doctor_id: targetDoctorId,
       hospital_id,
       day_of_week,
       start_time,
@@ -44,20 +59,35 @@ export const addAvailability = async (req, res) => {
 
     res.status(201).json({
       message: "Availability added successfully.",
-      availability: newAvailability,
+      availability: newAvailability
     });
+
   } catch (error) {
     console.error("Error adding availability:", error);
     res.status(500).json({ message: "Server error while adding availability." });
   }
 };
 
+
 export const getMyAvailability = async (req, res) => {
   try {
-    const doctor = req.user;
+    const hospital_id = req.query.hospitalId;
+
+    const roleName = await getUserRole(req.user.user_id, hospital_id);
+
+    let whereClause = {};
+    if (roleName === "Doctor") {
+      whereClause.doctor_id = req.user.user_id;
+    } else if (roleName === "Owner" || roleName === "Admin") {
+      if (req.query.doctorId) whereClause.doctor_id = req.query.doctorId;
+    } else {
+      return res.status(403).json({ message: "Permission denied." });
+    }
+
+    if (hospital_id) whereClause.hospital_id = hospital_id;
 
     const availabilities = await db.DoctorAvailability.findAll({
-      where: { doctor_id: doctor.user_id },
+      where: whereClause,
       include: [
         {
           model: db.Hospital,
@@ -72,6 +102,7 @@ export const getMyAvailability = async (req, res) => {
       message: "Availabilities fetched successfully.",
       availabilities,
     });
+
   } catch (error) {
     console.error("Error fetching availability:", error);
     res.status(500).json({ message: "Server error while fetching availability." });
@@ -80,29 +111,40 @@ export const getMyAvailability = async (req, res) => {
 
 export const deleteAvailability = async (req, res) => {
   try {
-    const doctorId = req.user.user_id; 
     const { availabilityId } = req.params;
+    const hospital_id = req.query.hospitalId;
 
-    // if (req.user.role !== "doctor") {
-    //   return res.status(403).json({ message: "Only doctors can delete availability" });
-    // }
+    if (!hospital_id) return res.status(400).json({ message: "Hospital ID required" });
 
-    const availability = await db.DoctorAvailability.findOne({
-      where: { availability_id: availabilityId, doctor_id: doctorId },
-    });
+    const roleName = await getUserRole(req.user.user_id, hospital_id);
+
+    let availability;
+
+    if (roleName === "Doctor") {
+      availability = await db.DoctorAvailability.findOne({
+        where: { availability_id: availabilityId, doctor_id: req.user.user_id },
+      });
+    } else if (roleName === "Owner" || roleName === "Admin") {
+      availability = await db.DoctorAvailability.findOne({
+        where: { availability_id: availabilityId },
+      });
+    } else {
+      return res.status(403).json({ message: "Permission denied." });
+    }
 
     if (!availability) {
-      return res.status(404).json({ message: "Availability not found or not owned by this doctor" });
+      return res.status(404).json({ message: "Availability not found or access denied" });
     }
 
     await availability.destroy();
-
     res.status(200).json({ message: "Availability deleted successfully" });
+
   } catch (error) {
     console.error("Error deleting availability:", error);
-    res.status(500).json({ message: "Error deleting availability", error: error.message });
+    res.status(500).json({ message: "Server error while deleting availability." });
   }
 };
+
 
 export const getDoctorAvailableSlots = async (req, res) => {
   try {

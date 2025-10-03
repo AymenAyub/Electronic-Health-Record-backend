@@ -25,7 +25,8 @@ export async function up(queryInterface, Sequelize) {
     { name: 'edit_role', description: 'Can edit roles' },
     { name: 'view_roles', description: 'Can view roles' },
     { name: 'delete_role', description: 'Can delete roles' },
-
+     { name: 'view_dashboard', description: 'Can view dashboard' },
+    { name: 'view_settings', description: 'Can view settings' },
   ]
 
   const insertData = [];

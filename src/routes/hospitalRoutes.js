@@ -4,12 +4,11 @@ const router=express.Router();
 import { authorizePermission } from "../middlewares/rbac.js";
 import { authenticateUser } from "../middlewares/authMiddleware.js";
 import { isOwner } from "../middlewares/ownerMiddleware.js";
-import { checkSubdomain } from "../controllers/hospitalController.js";
-import { getBySubdomain } from "../controllers/hospitalController.js";
+
 import { getMyHospital } from "../controllers/hospitalController.js";
 
-router.get("/check-subdomain/:value", checkSubdomain);
-router.get("/getBySubdomain/:subdomain", getBySubdomain);
+// router.get("/check-subdomain/:value", checkSubdomain);
+// router.get("/getBySubdomain/:subdomain", getBySubdomain);
 router.get("/:hospital_id", authenticateUser, getMyHospital);
 router.post("/registerHospital",authenticateUser, authorizePermission('add_hospital'),registerHospital);
 router.get("/check",authenticateUser, isOwner, checkHospital)

@@ -58,35 +58,50 @@ export const login = async (req, res) => {
         {
           model: db.Hospital,
           as: "hospital",
-          attributes: ["id", "name", "subdomain", "email", "phone", "address"],
+          attributes: ["id", "name", "email", "phone", "address"],
         },
         {
           model: db.Role,
           as: "role",
-          attributes: ["role_id", "name"], 
+          attributes: ["role_id", "name"],
+          include: [
+            {
+              model: db.Permission,
+              as: "permissions",
+              attributes: ["permission_id", "name", "description"],
+              through: { attributes: [] },
+            },
+          ],
         },
       ],
     });
 
-      const hospitals = userHospitals
-    .filter((uh) => uh.hospital_id !== null)   
-    .map((uh) => ({
-      hospital_id: uh.hospital_id,
-      role: uh.role ? { id: uh.role.role_id, name: uh.role.name } : null,
-      hospital: uh.hospital ? uh.hospital.dataValues : null,
-    }));
-
+    const hospitals = userHospitals
+      .filter((uh) => uh.hospital_id !== null)
+      .map((uh) => ({
+        hospital_id: uh.hospital_id,
+        role: uh.role
+          ? {
+              id: uh.role.role_id,
+              name: uh.role.name,
+              permissions: uh.role.permissions.map((p) => ({
+                id: p.permission_id,
+                name: p.name,
+                description: p.description,
+              })),
+            }
+          : null,
+        hospital: uh.hospital ? uh.hospital.dataValues : null,
+      }));
 
     const defaultHospitalId = hospitals.length > 0 ? hospitals[0].hospital_id : null;
 
     const token = jwt.sign(
-      { user_id: user.user_id, email: user.email ,  hospital_id: defaultHospitalId },
+      { user_id: user.user_id, email: user.email, hospital_id: defaultHospitalId },
       process.env.JWT_SECRET
     );
 
     const { password: _, ...userWithoutPassword } = user.dataValues;
-
-    const defaultRole = userHospitals.find((uh) => uh.hospital_id === null)?.role || null;
 
     res.json({
       message: "Login successful",
@@ -94,14 +109,13 @@ export const login = async (req, res) => {
       user: userWithoutPassword,
       hospitals,
       defaultHospitalId,
-      defaultRole            
     });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
-}; 
+};
+
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -390,3 +404,92 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+export const getMe = async (req, res) => {
+  try {
+    const user = await db.User.findByPk(req.user.user_id, {
+      attributes: ['user_id', 'name', 'email', 'contact'],
+      include: [
+        {
+          model: db.UserHospital,
+          as: 'userHospitals',
+          include: [
+            { model: db.Hospital, as: 'hospital', attributes: ['id', 'name'] },
+            { model: db.Role, as: 'role', attributes: ['role_id', 'name'] },
+          ],
+        },
+      ],
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const hospitals = user.userHospitals.map(uh => ({
+      id: uh.hospital.id,
+      name: uh.hospital.name,
+    }));
+
+    res.json({
+      name: user.name,
+      email: user.email,
+      phone: user.contact,
+      role: user.userHospitals[0]?.role?.name || "N/A",
+      hospitals,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateMe = async (req, res) => {
+  try {
+    const user = req.user; 
+    const { name, email, phone } = req.body;
+
+    if (email && email !== user.email) {
+      const existing = await db.User.findOne({ where: { email } });
+      if (existing) return res.status(400).json({ message: "Email already in use" });
+    }
+
+    await user.update({
+      name: name || user.name,
+      email: email || user.email,
+      contact: phone || user.contact,
+    });
+
+    const { password, ...userWithoutPassword } = user.dataValues;
+
+    res.json({ message: "Profile updated successfully", user: userWithoutPassword });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const changePassword = async (req,res) =>{
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.user_id; 
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ message: "Old and new password required" });
+    }
+
+    const user = await db.User.findByPk(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Old password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+
+}

@@ -18,10 +18,6 @@ export async function up(queryInterface, Sequelize) {
         type: Sequelize.STRING,
         unique: true
       },
-      subdomain: {
-        type: Sequelize.STRING,
-        unique: true
-      },
       phone: {
         type: Sequelize.STRING
       },
