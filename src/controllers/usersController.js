@@ -354,7 +354,7 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const loginUser = req.user;
-    const hospital_id = req.query.hospital_id;
+    const hospital_id = req.query.hospitalId;
 
     if (!loginUser) {
       return res.status(401).json({ message: "Unauthorized" });

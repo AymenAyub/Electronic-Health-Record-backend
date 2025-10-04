@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post("/patients/addPatient", authenticateUser,authorizePermission('add_patient'), addPatient);
 router.get("/getPatients", authenticateUser,authorizePermission('view_patients'), getPatients);
-router.put("/patients/updatePatient/:patient_id",authenticateUser, authorizePermission('edit_patients'), updatePatient);
+router.put("/patients/updatePatient/:patient_id",authenticateUser, authorizePermission('edit_patient'), updatePatient);
 router.delete("/patients/deletePatient/:patient_id", authenticateUser,deletePatient);
 
 
