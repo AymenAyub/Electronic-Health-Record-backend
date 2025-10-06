@@ -11,7 +11,7 @@ import doctorRoutes from "./src/routes/doctorRoutes.js";
 import medicalHistoryRoutes from "./src/routes/medicalHistoryRoutes.js";
 import roleRoutes from "./src/routes/roleRoutes.js";
 import permissionRoutes from "./src/routes/permissionRoutes.js";
-import dashboardRoutes from "./src/routes/DashboardRoutes.js";
+import dashboardRoutes from "./src/routes/dashboardRoutes.js";
 dotenv.config();
 
 const app = express();
