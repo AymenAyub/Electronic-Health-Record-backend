@@ -1,7 +1,4 @@
 import db from "../models/index.js";
-
-
-
 export const registerHospital = async (req, res) => {
   try {
     const user = req.user; 
