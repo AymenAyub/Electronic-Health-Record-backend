@@ -34,7 +34,7 @@ app.use("/api", appointmentRoutes);
 app.use("/api", doctorAvailabilityRoutes);
 app.use("/api", medicalHistoryRoutes);
 
-db.sequelize.sync({ alter: true })
+db.sequelize.authenticate()
   .then(() => {
     console.log(" MySQL connected & tables synced");
 
